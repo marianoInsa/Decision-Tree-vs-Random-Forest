@@ -69,7 +69,7 @@ generalización (Liu, pp. 74-75).
 **Ejemplo del texto con el dataset de préstamos** (p. 73): con $|D| = 15$ (6 ejemplos `No` y
 9 `Yes`), $\mathrm{entropy}(D) = 0.971$, y las ganancias resultan
 
-$$\mathrm{gain}(D, \text{Credit\_rating}) = 0.363 \qquad \mathrm{gain}(D, \text{Own\_house}) = 0.420$$
+$$\mathrm{gain}(D, \text{CreditRating}) = 0.363 \qquad \mathrm{gain}(D, \text{OwnHouse}) = 0.420$$
 
 eligiéndose `Own_house` como atributo raíz.
 
