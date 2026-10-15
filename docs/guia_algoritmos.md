@@ -117,7 +117,7 @@ $$\mathrm{gain}(D, A_i, t) = \mathrm{entropy}(D) - \mathrm{entropy}_{A_i,t}(D)$$
 
 donde $D_{\le t}$ y $D_{> t}$ son los subconjuntos definidos por el umbral. Se elige
 
-$$t^{*} = \arg\max_{t} \mathrm{gain}(D, A_i, t) \quad \text{(o bien } \arg\max_{t} \mathrm{gainRatio}(D, A_i, t)\text{)}$$
+$$t^* = \mathop{\mathrm{\arg\max}}\limits_{t} \mathrm{gain}(D, A_i, t) \quad \text{(o bien } \mathop{\mathrm{\arg\max}}\limits_{t} \mathrm{gainRatio}(D, A_i, t)\text{)}$$
 
 (Liu, pp. 75-76.)
 
