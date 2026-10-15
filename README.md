@@ -29,27 +29,12 @@ Restricción del enunciado: el DT es 100 % propio. Para el RF sí se puede usar 
 ```
 ├── README.md
 ├── requirements.txt
-├── data/                    # dataset indicado por la cátedra
 └── notebooks/
     ├── 01_decision_tree_c45.ipynb
     ├── 02_random_forest.ipynb
     ├── 03_experimentos.ipynb
     └── 04_interfaz.ipynb
 ```
-
----
-
-## Etapas
-
-Las etapas son secuenciales: `01 → 02 → 03 → 04`.
-Cada notebook indica su objetivo, entradas y salidas; las plantillas no incluyen implementaciones.
-
-| Notebook                                                     | Qué contiene                                                                         |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| [01_decision_tree_c45](notebooks/01_decision_tree_c45.ipynb) | Plantilla para el Decision Tree propio basado en C4.5.                               |
-| [02_random_forest](notebooks/02_random_forest.ipynb)         | Plantilla para Random Forest de Scikit-learn.                                        |
-| [03_experimentos](notebooks/03_experimentos.ipynb)           | Plantilla de comparación DT vs RF: métricas, tiempos, tablas y gráficos.             |
-| [04_interfaz](notebooks/04_interfaz.ipynb)                   | Plantilla de interfaz con ipywidgets para ejecutar pruebas y ver resultados.         |
 
 ---
 
