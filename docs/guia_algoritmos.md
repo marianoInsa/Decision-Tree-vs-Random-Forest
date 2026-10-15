@@ -31,7 +31,7 @@ Dado un conjunto de entrenamiento $D$ con $|D|$ instancias:
 
 ### 2. Entropía
 
-$$\operatorname{entropy}(D) = -\sum_{j=1}^{|C|} \Pr(c_j) \log_2 \Pr(c_j)$$
+$$\mathrm{entropy}(D) = -\sum_{j=1}^{|C|} \Pr(c_j) \log_2 \Pr(c_j)$$
 
 (Liu, Ec. 2, p. 72. Convención: $0 \log 0 = 0$. Unidad: bit.)
 
@@ -41,35 +41,35 @@ mínimo (0 bit) cuando todas las instancias son de una única clase.
 
 **Valores de verificación** (ejemplo del propio texto, p. 72):
 
-- Con $50\%$ y $50\%$: $\operatorname{entropy}(D) = -0.5 \log_2 0.5 - 0.5 \log_2 0.5 = 1$.
-- Con $20\%$ y $80\%$: $\operatorname{entropy}(D) = -0.2 \log_2 0.2 - 0.8 \log_2 0.8 = 0.722$.
-- Con $100\%$ de una clase: $\operatorname{entropy}(D) = 0$.
+- Con $50\%$ y $50\%$: $\mathrm{entropy}(D) = -0.5 \log_2 0.5 - 0.5 \log_2 0.5 = 1$.
+- Con $20\%$ y $80\%$: $\mathrm{entropy}(D) = -0.2 \log_2 0.2 - 0.8 \log_2 0.8 = 0.722$.
+- Con $100\%$ de una clase: $\mathrm{entropy}(D) = 0$.
 
 ### 3. Entropía ponderada tras la partición
 
 Si el atributo $A_i$ tiene $v$ valores posibles $\{v_1, v_2, \dots, v_v\}$ y divide $D$ en
 $v$ subconjuntos disjuntos $\{D_1, D_2, \dots, D_v\}$:
 
-$$\operatorname{entropy}_{A_i}(D) = \sum_{j=1}^{v} \frac{|D_j|}{|D|}\, \operatorname{entropy}(D_j)$$
+$$\mathrm{entropy}_{A_i}(D) = \sum_{j=1}^{v} \frac{|D_j|}{|D|}\, \mathrm{entropy}(D_j)$$
 
 (Liu, Ec. 3, p. 73. Es la función `impurityEval-2` del algoritmo.)
 
 ### 4. Ganancia de información
 
-$$\operatorname{gain}(D, A_i) = \operatorname{entropy}(D) - \operatorname{entropy}_{A_i}(D)$$
+$$\mathrm{gain}(D, A_i) = \mathrm{entropy}(D) - \mathrm{entropy}_{A_i}(D)$$
 
 (Liu, Ec. 4, p. 73.)
 
 La ganancia mide la reducción de impureza lograda al particionar con $A_i$. El criterio de
 ganancia tiende a favorecer atributos con muchos valores posibles: un atributo
 identificador (ID) produce $|D|$ subconjuntos de una instancia cada uno, con
-$\operatorname{entropy}_{\text{ID}}(D) = 0$ y ganancia máxima, pero sin capacidad de
+$\mathrm{entropy}_{\text{ID}}(D) = 0$ y ganancia máxima, pero sin capacidad de
 generalización (Liu, pp. 74-75).
 
 **Ejemplo del texto con el dataset de préstamos** (p. 73): con $|D| = 15$ (6 ejemplos `No` y
-9 `Yes`), $\operatorname{entropy}(D) = 0.971$, y las ganancias resultan
+9 `Yes`), $\mathrm{entropy}(D) = 0.971$, y las ganancias resultan
 
-$$\operatorname{gain}(D, \text{Credit\_rating}) = 0.363 \qquad \operatorname{gain}(D, \text{Own\_house}) = 0.420$$
+$$\mathrm{gain}(D, \text{Credit\_rating}) = 0.363 \qquad \mathrm{gain}(D, \text{Own\_house}) = 0.420$$
 
 eligiéndose `Own_house` como atributo raíz.
 
@@ -78,7 +78,7 @@ eligiéndose `Own_house` como atributo raíz.
 Para corregir el sesgo de la ganancia, C4.5 normaliza dividiendo por la entropía de $D$
 respecto de los valores del propio atributo (el denominador se denomina *split info*):
 
-$$\operatorname{gainRatio}(D, A_i) = \frac{\operatorname{gain}(D, A_i)}{-\displaystyle\sum_{j=1}^{s} \frac{|D_j|}{|D|} \log_2 \frac{|D_j|}{|D|}}$$
+$$\mathrm{gainRatio}(D, A_i) = \frac{\mathrm{gain}(D, A_i)}{-\displaystyle\sum_{j=1}^{s} \frac{|D_j|}{|D|} \log_2 \frac{|D_j|}{|D|}}$$
 
 (Liu, Ec. 5, pp. 74-75, donde $s$ es la cantidad de valores posibles de $A_i$ y $D_j$ el
 subconjunto de datos con el $j$-ésimo valor.)
@@ -111,13 +111,13 @@ Procedimiento:
 
 Para cada candidato $t$:
 
-$$\operatorname{entropy}_{A_i,t}(D) = \frac{|D_{\le t}|}{|D|}\operatorname{entropy}(D_{\le t}) + \frac{|D_{> t}|}{|D|}\operatorname{entropy}(D_{> t})$$
+$$\mathrm{entropy}_{A_i,t}(D) = \frac{|D_{\le t}|}{|D|}\mathrm{entropy}(D_{\le t}) + \frac{|D_{> t}|}{|D|}\mathrm{entropy}(D_{> t})$$
 
-$$\operatorname{gain}(D, A_i, t) = \operatorname{entropy}(D) - \operatorname{entropy}_{A_i,t}(D)$$
+$$\mathrm{gain}(D, A_i, t) = \mathrm{entropy}(D) - \mathrm{entropy}_{A_i,t}(D)$$
 
 donde $D_{\le t}$ y $D_{> t}$ son los subconjuntos definidos por el umbral. Se elige
 
-$$t^{*} = \arg\max_{t} \operatorname{gain}(D, A_i, t) \quad \text{(o bien } \arg\max_{t} \operatorname{gainRatio}(D, A_i, t)\text{)}$$
+$$t^{*} = \arg\max_{t} \mathrm{gain}(D, A_i, t) \quad \text{(o bien } \arg\max_{t} \mathrm{gainRatio}(D, A_i, t)\text{)}$$
 
 (Liu, pp. 75-76.)
 
