@@ -1,0 +1,23 @@
+[project]
+name = "decision-tree-vs-random-forest"
+version = "0.1.0"
+description = "Comparación de Decision Tree C4.5 y Random Forest para clasificación"
+requires-python = ">=3.12"
+dependencies = [
+    "ipywidgets",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel",
+    "jupyterlab",
+    "pypdf",
+    "tecto==0.17.0",
+]
+
+[tool.uv]
+package = false
