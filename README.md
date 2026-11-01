@@ -23,6 +23,7 @@ permite usar scikit-learn.
 
 ```text
 ├── data/raw/                 # Copias originales de los datasets de UCI
+├── datos_tp.py               # Carga y partición compartidas por DT y RF
 ├── docs/
 ├── notebooks/
 │   ├── 01_decision_tree_c45.ipynb
@@ -32,6 +33,7 @@ permite usar scikit-learn.
 ├── paper/
 │   └── Paper_Equipo-QG_TP_IA.pdf  # Informe final del TP
 ├── tests/
+│   ├── test_c45.py
 │   └── test_paper_build.py
 ├── .python-version
 ├── pyproject.toml
@@ -73,9 +75,9 @@ Ambos algoritmos deben compararse sobre **los mismos índices de entrenamiento y
 prueba**, y con las mismas etiquetas reales. Las transformaciones particulares de
 cada modelo se ajustan solo con entrenamiento. El notebook conserva los datos originales
 de entrada y las particiones en `datasets` y `particiones`; el one-hot de Random Forest
-se aplica dentro de su pipeline. Por ahora, un C4.5 que solo admita categorías puede
-compararse directamente sobre Contact Lenses. Compararlo sobre Iris y Statlog Heart
-requiere que también pueda procesar sus características numéricas.
+se aplica dentro de su pipeline. Ambos notebooks importan la misma preparación de
+`datos_tp.py`. El árbol propio admite categorías y números, por lo que puede recibir
+los tres datasets originales sin usar el one-hot de RF.
 
 ## Datasets base
 
@@ -178,6 +180,57 @@ La descripción original está en `data/raw/heart.doc`.
   muestra las versiones usadas y verifica que al repetir partición y entrenamiento
   se obtengan los mismos índices y predicciones en ese entorno.
 
+## Ejecutar el árbol propio
+
+```sh
+uv run jupyter lab notebooks/01_decision_tree_c45.ipynb
+```
+
+El notebook implementa `Nodo`, `ArbolC45`, las fórmulas de Entropía, Ganancia de
+Información, Split Info y Gain Ratio, y la construcción recursiva. Sus celdas
+explican la correspondencia con **SEM04-DecisionTrees, filminas 23–30**, y con
+Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
+
+- Las categorías generan una rama por valor observado; el atributo usado se retira
+  de ese camino. Los códigos categóricos deben estar representados como texto,
+  booleanos o dtype `category`, tal como se preparan en los datasets del TP.
+- Los números generan dos ramas, `A ≤ t` y `A > t`. Se evalúan los valores distintos
+  ordenados salvo el mayor, usando `t = v_i`; el atributo puede reutilizarse en
+  descendientes. Cada corte se aprende solo con los casos de entrenamiento del nodo.
+- Se selecciona la partición con mayor Gain Ratio. Los empates exactos conservan
+  el primer atributo por orden de columnas y el menor corte numérico.
+- La prepoda compara la ganancia de información con `threshold`, en bits, usando
+  estrictamente `<`. El valor inicial `0.0` es una elección del proyecto y permite
+  divisiones con ganancia cero. Para cambiarlo, modificar `THRESHOLD` y reentrenar.
+- Se crea una hoja ante clase pura, atributos agotados, falta de particiones válidas
+  o ganancia inferior al umbral. Las hojas impuras usan la mayoría local; un empate
+  de clases se resuelve por primera aparición en los datos del nodo.
+- Ante una categoría sin rama en predicción se devuelve la mayoría del nodo
+  alcanzado. Se rechazan faltantes y valores numéricos no finitos.
+
+Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
+todas las heurísticas del sistema original. La pospoda, la visualización, los
+controles interactivos y los experimentos con selección de parámetros siguen
+pendientes. `fit(X, y)` es la organización interna del árbol; no se agrega
+`predict_proba` ni se modifica el contrato compartido `predict(X)`.
+
+La ejecución verifica el ejemplo de 15 casos de la filmina 27 contra cálculos
+manuales, un corte numérico conocido, la prepoda y la reutilización de atributos.
+También entrena sobre Contact Lenses, Iris y Statlog Heart y verifica el contrato.
+Las accuracies de entrenamiento y prueba son resultados base, no un umbral de
+aceptación ni una búsqueda de parámetros. Las futuras exploraciones deben usar
+validación dentro de entrenamiento y reservar test para la evaluación final.
+
+Pruebas adicionales del mismo código del notebook (sin una segunda implementación):
+
+```sh
+uv run python -m unittest discover -s tests -p 'test_c45.py' -v
+```
+
+Se comprueban cálculos manuales, ramas categóricas, cortes y sus límites,
+atributos constantes, empates, categorías nuevas, datos mixtos, prepoda,
+entradas inválidas, índices y ausencia de modificaciones en los datos.
+
 ## Ejecutar Random Forest
 
 Después de preparar el entorno local, abrir:
@@ -195,8 +248,12 @@ incluye los archivos de datos.
 La ejecución muestra tamaños y clases de las particiones, ejemplos de respuestas
 reales junto con predicciones, y accuracy de prueba para los tres datasets. También
 verifica el contrato de salida, la separación de train/test y la reproducibilidad.
-Estas métricas documentan una ejecución base; la comparación con C4.5 queda pendiente
-de integrar y ejecutar ese modelo sobre las mismas particiones.
+Estas métricas documentan una ejecución base. El notebook 01 ya usa las mismas
+particiones para el árbol propio; la comparación experimental con distintas
+parametrizaciones se desarrollará en el notebook 03.
+
+Para ambos notebooks, una ejecución local correcta no acredita por sí sola la
+ejecución en Google Colab: esa comprobación debe hacerse también en la plataforma.
 
 ## Entorno local con uv
 
