@@ -34,6 +34,8 @@ permite usar scikit-learn.
 │   └── Paper_Equipo-QG_TP_IA.pdf  # Informe final del TP
 ├── tests/
 │   ├── test_c45.py
+│   ├── test_c45_nulos.py
+│   ├── test_c45_hu07.py
 │   └── test_paper_build.py
 ├── .python-version
 ├── pyproject.toml
@@ -215,8 +217,8 @@ Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
 
 Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
 todas las heurísticas del sistema original. La pospoda, la visualización, los
-controles interactivos y los experimentos con selección de parámetros siguen
-pendientes. `fit(X, y)` es la organización interna del árbol; no se exige
+controles interactivos y los experimentos con selección automática de parámetros
+siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
 un contrato común adicional con RF. C4.5 agrega `predict_proba(X)` como
 capacidad propia, sin modificar el contrato compartido `predict(X)`.
 
@@ -235,7 +237,8 @@ uv run python -m unittest discover -s tests -p 'test_c45*.py' -v
 
 Se comprueban cálculos manuales, ramas categóricas, cortes y sus límites,
 atributos constantes, empates, categorías nuevas, datos mixtos, prepoda,
-entradas inválidas, índices y ausencia de modificaciones en los datos.
+controles de profundidad, masa y Gain Ratio (HU-07), entradas inválidas,
+índices y ausencia de modificaciones en los datos.
 
 ## HU-08: faltantes y probabilidades en C4.5
 
@@ -262,6 +265,39 @@ Las fórmulas, decisiones, recomendaciones y ejemplo manual están en
 demostración reproducible sobre los tres datasets con nulos en entrenamiento
 y test. RF conserva su contrato de entrada sin faltantes; HU-12 deberá definir
 su política de faltantes antes de comparar los modelos en esos escenarios.
+
+## HU-07: controles de crecimiento en C4.5
+
+`ArbolC45(threshold=0.0, max_depth=None, min_samples_split=2, min_gain_ratio=0.0)`
+mantiene la ganancia en bits como `threshold` y agrega tres controles de prepoda
+que se aplican mientras el árbol crece. No se implementa pospoda.
+
+- `max_depth=None` no limita la profundidad. La raíz está en 0 y un nodo en
+  `profundidad >= max_depth` queda como hoja con sus conteos ponderados.
+- `min_samples_split=2` compara la **masa efectiva** `sum(weights)`, no la cantidad
+  de filas: las copias fraccionarias de HU-08 no inflan la evidencia. La igualdad
+  permite dividir.
+- `min_gain_ratio=0` compara el Gain Ratio adimensional del mejor candidato. Es
+  independiente de `threshold` (bits): ambos deben pasar y la igualdad permite
+  dividir.
+
+`ArbolC45(0.05)` sigue funcionando porque `threshold` conserva la primera posición.
+Los controles se validan en el constructor y en `fit`; se excluyen `bool`, los
+valores no finitos y los dominios inválidos. Las hojas conservan la distribución
+ponderada, la política de clase y la inferencia probabilística con faltantes.
+
+Ejemplo:
+
+```python
+arbol = ArbolC45(max_depth=3, min_samples_split=5, min_gain_ratio=0.05)
+arbol.fit(X_train, y_train)
+```
+
+La sección 10 del notebook compara configuraciones y verifica la profundidad y la
+cantidad de hojas de forma recursiva sobre un fixture pequeño. Las decisiones y
+los límites están en [docs/hu07_decisiones.md](docs/hu07_decisiones.md); las
+pruebas específicas, en `tests/test_c45_hu07.py`. RF y la carga de datasets no
+cambian.
 
 ## Ejecutar Random Forest
 
