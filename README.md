@@ -47,6 +47,10 @@ El contrato compartido entre C4.5 y Random Forest es **`predict(X)`**. Cada mode
 se entrena previamente con su propio procedimiento. No se exige una clase propia
 ni un contrato común para `fit` o `predict_proba`.
 
+Este contrato describe la entrada común sin nulos. HU-08 amplía C4.5 con
+faltantes y `predict_proba`, como se detalla más abajo; RF conserva las
+restricciones de esta tabla.
+
 | Elemento | Definición |
 |---|---|
 | Entrada `X` | `pandas.DataFrame` no vacío, sin valores faltantes, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
@@ -204,15 +208,17 @@ Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
   divisiones con ganancia cero. Para cambiarlo, modificar `THRESHOLD` y reentrenar.
 - Se crea una hoja ante clase pura, atributos agotados, falta de particiones válidas
   o ganancia inferior al umbral. Las hojas impuras usan la mayoría local; un empate
-  de clases se resuelve por primera aparición en los datos del nodo.
+  de clases se resuelve por primera aparición global en entrenamiento (`classes_`).
 - Ante una categoría sin rama en predicción se devuelve la mayoría del nodo
-  alcanzado. Se rechazan faltantes y valores numéricos no finitos.
+  alcanzado. C4.5 admite faltantes en atributos mediante pesos fraccionarios;
+  se rechazan etiquetas faltantes, infinitos y complejos.
 
 Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
 todas las heurísticas del sistema original. La pospoda, la visualización, los
 controles interactivos y los experimentos con selección de parámetros siguen
-pendientes. `fit(X, y)` es la organización interna del árbol; no se agrega
-`predict_proba` ni se modifica el contrato compartido `predict(X)`.
+pendientes. `fit(X, y)` es la organización interna del árbol; no se exige
+un contrato común adicional con RF. C4.5 agrega `predict_proba(X)` como
+capacidad propia, sin modificar el contrato compartido `predict(X)`.
 
 La ejecución verifica el ejemplo de 15 casos de la filmina 27 contra cálculos
 manuales, un corte numérico conocido, la prepoda y la reutilización de atributos.
@@ -224,12 +230,38 @@ validación dentro de entrenamiento y reservar test para la evaluación final.
 Pruebas adicionales del mismo código del notebook (sin una segunda implementación):
 
 ```sh
-uv run python -m unittest discover -s tests -p 'test_c45.py' -v
+uv run python -m unittest discover -s tests -p 'test_c45*.py' -v
 ```
 
 Se comprueban cálculos manuales, ramas categóricas, cortes y sus límites,
 atributos constantes, empates, categorías nuevas, datos mixtos, prepoda,
 entradas inválidas, índices y ausencia de modificaciones en los datos.
+
+## HU-08: faltantes y probabilidades en C4.5
+
+`ArbolC45` admite `None`, `NaN`, `pd.NA` y `NaT` en atributos de entrenamiento
+y predicción, manteniendo el objetivo sin nulos. No imputa: ajusta Gain Ratio
+por la masa conocida, distribuye faltantes con pesos fraccionarios y mezcla
+las distribuciones de las ramas al predecir.
+
+`predict_proba(X)` devuelve un DataFrame con una columna por clase en el orden de
+`classes_` (primera aparición en `fit`) y conserva exactamente índice y orden.
+`predict(X)` devuelve su argmax como columna `prediccion`; los empates usan ese
+orden global. Una categoría nueva conserva la respuesta de mayoría local,
+obtenida de la distribución del nodo alcanzado. El desempate global reemplaza
+el desempate local anterior y puede modificar respuestas en hojas empatadas.
+
+Las probabilidades son frecuencias ponderadas, sin calibración. Los pesos de
+los hijos conservan la masa por clase del padre. Un atributo totalmente vacío
+no divide; si no hay particiones válidas se usa una hoja con las frecuencias
+locales. Para muchos nulos conviene prepoda positiva porque el reparto puede
+multiplicar las filas representadas.
+
+Las fórmulas, decisiones, recomendaciones y ejemplo manual están en
+[docs/hu08_decisiones.md](docs/hu08_decisiones.md). El notebook incluye una
+demostración reproducible sobre los tres datasets con nulos en entrenamiento
+y test. RF conserva su contrato de entrada sin faltantes; HU-12 deberá definir
+su política de faltantes antes de comparar los modelos en esos escenarios.
 
 ## Ejecutar Random Forest
 

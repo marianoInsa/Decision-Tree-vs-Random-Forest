@@ -1,0 +1,2 @@
+# Las copias originales se verifican por SHA-256: conservar sus bytes LF en Windows.
+data/raw/* text eol=lf
