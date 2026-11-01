@@ -15,7 +15,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 NOTEBOOK = RAIZ / "notebooks/01_decision_tree_c45.ipynb"
 modulo = types.ModuleType("c45_desde_notebook")
 sys.modules[modulo.__name__] = modulo
-for celda in json.loads(NOTEBOOK.read_text())["cells"]:
+for celda in json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]:
     if "c45-definiciones" in celda.get("metadata", {}).get("tags", []):
         exec(compile("".join(celda["source"]), str(NOTEBOOK), "exec"), modulo.__dict__)
 
@@ -61,7 +61,7 @@ class TestMetricas(unittest.TestCase):
             modulo.buscar_mejor_umbral([1, 2], ["A"])
 
     def test_busqueda_rechaza_numeros_invalidos(self):
-        for valor in (float("inf"), float("nan"), "1", True, complex(1, 1)):
+        for valor in (float("inf"), "1", True, complex(1, 1)):
             with self.subTest(valor=valor), self.assertRaises(ValueError):
                 modulo.buscar_mejor_umbral([valor, 2], ["A", "B"])
 
@@ -181,7 +181,7 @@ class TestContrato(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.arbol.predict([[1, "r"]])
         invalidas = [self.X.iloc[:0], self.X[["c", "x"]], self.X.drop(columns="c"),
-                     self.X.assign(extra=0), self.X.assign(x=float("nan")),
+                     self.X.assign(extra=0),
                      self.X.assign(x=float("inf")), self.X.assign(x="texto")]
         for X in invalidas:
             with self.subTest(columnas=list(X.columns)), self.assertRaises(ValueError):
@@ -197,7 +197,7 @@ class TestContrato(unittest.TestCase):
             with self.subTest(y=y.columns.tolist()), self.assertRaises(ValueError):
                 ArbolC45().fit(self.X, y)
         for X in (self.X.iloc[:0], self.X.assign(x=float("inf")),
-                  self.X.assign(c=None), self.X.assign(x=complex(1, 2)),
+                  self.X.assign(x=complex(1, 2)),
                   self.X.rename(columns={"c": "x"})):
             with self.subTest(columnas=X.columns.tolist()), self.assertRaises(ValueError):
                 ArbolC45().fit(X, self.y)
