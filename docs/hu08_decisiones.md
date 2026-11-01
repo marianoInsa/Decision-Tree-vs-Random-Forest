@@ -91,7 +91,8 @@ distribuciones de voto de mayorías.
   duplicados y no se modifican `X` ni `y`.
 - Repartir faltantes puede multiplicar las filas representadas y el costo del árbol.
   Conviene usar prepoda positiva para experimentos con muchos nulos; los controles
-  estructurales adicionales y la pospoda corresponden a HU-07.
+  estructurales de HU-07 ya están disponibles (`docs/hu07_decisiones.md`) y la
+  pospoda sigue pendiente.
 - HU-12 debe comparar modelos con una política explícita de faltantes para RF y
   particiones compartidas. Esta HU no modifica RF ni acredita ejecución en Colab.
 
