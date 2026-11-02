@@ -6,25 +6,30 @@ imputa datos, no usa scikit-learn para aprender el árbol y no modifica Random F
 
 ## Decisiones y recomendaciones adoptadas
 
-| Cuestión | Recomendación implementada | Motivo |
-| --- | --- | --- |
-| Qué es un faltante | `None`, `NaN`, `pd.NA` y `NaT` en atributos | Cubrir las representaciones habituales de pandas sin crear una categoría artificial. |
-| Etiqueta objetivo faltante | Rechazarla | No hay una clase supervisada que permita entrenar ese caso. |
-| Reparto durante entrenamiento | Copiar el caso a cada rama con peso `w * q_rama`, calculado con la masa conocida del nodo | Mantener la masa total y la de cada clase, también después de varias divisiones. |
-| Ganancia de información | Calcular sobre conocidos y multiplicar por su proporción de masa | Un atributo poco observado no debe recibir la misma ganancia que uno completamente observado. |
-| Split Info | Incluir la masa desconocida como grupo adicional en el denominador | Los desconocidos penalizan la selección; ese grupo no se convierte en una rama. |
-| Atributo vacío o constante entre los conocidos | Descartar la partición; si no queda ninguna, crear hoja con distribución local | Evitar divisiones sin información y divisiones por cero. |
-| Faltante al predecir | Mezclar las distribuciones de todas las ramas según sus proporciones de entrenamiento | Conservar incertidumbre; un voto de clases mayoritarias puede dar una respuesta distinta e incorrecta. |
-| Categoría nueva al predecir | Distribución local del nodo alcanzado; `predict` devuelve su mayoría | Mantener el comportamiento solicitado para categorías nuevas, sin tratarlas como faltantes. |
-| Salida de `predict_proba` | DataFrame con columnas en el orden de `classes_`, índice y orden de entrada | Integración explícita con pandas y con el contrato de `predict`. |
-| Orden de clases y empates de clase | Primera aparición global en `fit`; `predict` es el argmax de `predict_proba` | Evitar desempates distintos entre la predicción y las probabilidades. |
-| Empates de Gain Ratio | Primer atributo por orden de columnas; menor corte numérico | Conservar el criterio determinista del árbol base. |
-| Prepoda | Aplicar `threshold` a la ganancia ajustada por faltantes, manteniendo `<` | Penalizar la falta de evidencia también al decidir si dividir. |
-| Precisión numérica | Conservar pesos positivos sin redondearlos; normalizar únicamente la distribución final | No eliminar de forma arbitraria ejemplos con pesos pequeños. |
+En esta tabla, **atributo** es una característica de entrada y **clase** es la
+respuesta que queremos predecir. El **peso** indica cuánto aporta cada ejemplo
+al cálculo: empieza en 1 y puede repartirse entre varias ramas cuando falta un
+valor.
 
-Las decisiones de categorías nuevas, formato de probabilidades y orden de clases
-fueron confirmadas por el responsable de la tarea. El resto son recomendaciones
-de implementación documentadas para revisión del equipo.
+| ¿Qué situación hay que resolver? | ¿Qué hace la implementación? | ¿Por qué se decidió así? |
+| --- | --- | --- |
+| **¿Qué valores se consideran faltantes en los atributos?** | Reconoce `None`, `NaN`, `pd.NA` y `NaT` como valores faltantes. | Son representaciones habituales de datos ausentes. No se interpretan como una categoría más del atributo. |
+| **¿Qué pasa si falta la clase de un ejemplo de entrenamiento?** | Rechaza ese ejemplo como entrada válida para entrenar. | Sin la clase, no se conoce la respuesta que el árbol debería aprender. |
+| **¿Cómo se utiliza un ejemplo de entrenamiento si le falta el atributo que decide la división?** | Lo envía a todas las ramas, repartiendo su peso según la proporción de peso de los ejemplos conocidos que va a cada una. | Permite aprovechar el ejemplo sin inventar el valor faltante. La suma de sus aportes conserva su peso original, incluso después de varias divisiones. |
+| **¿Cómo se calcula la ganancia de información cuando un atributo tiene faltantes?** | Calcula la ganancia usando los ejemplos con valor conocido y la multiplica por la proporción del peso total que representan esos ejemplos. | Así, la ganancia refleja cuánto respaldo tiene en los datos disponibles. |
+| **¿Cómo se incluyen los faltantes en el cálculo de Split Info?** | Incluye el peso de los ejemplos faltantes como un grupo adicional al calcular Split Info, que es el denominador de Gain Ratio. Ese grupo se usa solo en el cálculo; no crea una rama del árbol. | Hace que la evaluación de la división también tenga en cuenta los datos desconocidos. |
+| **¿Se puede dividir por un atributo si todos sus valores faltan o si todos los conocidos son iguales?** | No utiliza ese atributo para dividir. Si ningún atributo permite una división válida, crea una hoja con las proporciones de clases del nodo. | Ese atributo no permite separar los ejemplos en grupos distintos con información conocida. |
+| **¿Cómo se predice cuando falta el atributo que indica qué rama seguir?** | Consulta todas las ramas y combina sus probabilidades de clase, usando las proporciones calculadas durante el entrenamiento. | Conserva la información de todas las clases. Tomar solamente la clase ganadora de cada rama perdería información y podría cambiar el resultado. |
+| **¿Qué pasa si al predecir aparece una categoría que no se vio en ese nodo durante el entrenamiento?** | Usa las proporciones de clases del nodo alcanzado. La clase predicha es la de mayor proporción. | Mantiene el comportamiento acordado para categorías nuevas, que se tratan de forma distinta a los valores faltantes. |
+| **¿En qué formato se devuelven las probabilidades de cada clase?** | `predict_proba` devuelve una tabla de pandas: una fila por ejemplo y una columna por clase. Conserva el índice y el orden de las filas de entrada; las columnas siguen el orden de `classes_`. | Permite identificar a qué ejemplo y a qué clase corresponde cada probabilidad. |
+| **¿Qué clase se elige si varias tienen la misma probabilidad máxima?** | Elige la que apareció primero en el conjunto completo de entrenamiento. Ese mismo orden se usa en `classes_`. `predict` siempre elige la clase con mayor probabilidad de `predict_proba`, aplicando ese desempate. | Evita que la etiqueta predicha y las probabilidades devueltas utilicen criterios diferentes. |
+| **¿Qué división se elige si varias tienen exactamente el mismo Gain Ratio?** | Prioriza el atributo que aparece primero en el orden de columnas. Entre cortes numéricos empatados de un mismo atributo, elige el menor valor de corte. | Hace que el resultado sea reproducible y conserva el criterio del árbol base. |
+| **¿Cuándo se detiene el crecimiento del árbol por falta de ganancia?** | Impide una división si su ganancia, ya ajustada por los faltantes, es menor que `threshold`. Si es igual, este criterio no la impide. | La decisión de seguir dividiendo también debe considerar cuánta información conocida respalda la ganancia. |
+| **¿Qué pasa con los ejemplos cuyo peso queda muy pequeño después de varios repartos?** | Conserva todos los pesos positivos sin redondearlos. Solo normaliza las probabilidades finales para que sumen 1. | Evita descartar arbitrariamente ejemplos que todavía aportan información. |
+
+Las decisiones sobre **categorías nuevas, formato de las probabilidades y orden de
+las clases** fueron confirmadas por el responsable de la tarea. Las demás son
+recomendaciones de implementación documentadas para revisión del equipo.
 
 ## Cálculo en un nodo
 
