@@ -242,8 +242,53 @@ La diferencia con un árbol único está en la fuente de variabilidad. Un árbol
 
 El costo de entrenamiento del bosque suele ser mayor que el de un árbol único, porque se construyen $B$ árboles y cada uno recorre sus propios candidatos de división. La predicción también requiere recorrer todos los árboles y combinar sus respuestas. A cambio, la decisión deja de poder seguirse en un solo camino de la raíz a una hoja, porque el resultado depende del conjunto de árboles. La solución implementada organiza ambos modelos y resuelve los problemas técnicos que aparecen al integrarlos. La sección siguiente describe esa organización.
 
-\section{Solución implementada}
-% TODO: describir la solución y los problemas encontrados.
+\section{Descripción de la solución implementada}
+
+La sección anterior describió los procedimientos de ambos modelos. Esta sección presenta cómo se organiza el software que los implementa y qué problemas técnicos se resolvieron. Primero se describe la arquitectura general y el contrato común de predicción. Después se explican las decisiones de diseño y los problemas encontrados.
+
+\subsection{Arquitectura de software}
+
+La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La primera capa carga los conjuntos originales, verifica su integridad y construye las particiones. La segunda entrena el árbol de decisión C4.5 y el Random Forest. La tercera compara las predicciones con las clases reales y calcula las métricas. La Figura~\ref{fig:arquitectura} resume el flujo entre esas capas y las dos ramas de modelado.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rectangle, rounded corners=2pt, align=center,
+              minimum width=2.6cm, minimum height=0.7cm, font=\small},
+  arrow/.style={-{Latex[length=2mm]}, thick}
+]
+\node[box] (datos) at (0,0) {Conjuntos de datos\\originales};
+\node[box] (carga) at (0,-0.9) {Carga y validación};
+\node[box] (particion) at (0,-1.8) {Partición estratificada};
+\node[box] (entrenamiento) at (-3.1,-2.8) {Entrenamiento};
+\node[box] (prueba) at (3.1,-2.8) {Prueba};
+\node[box] (c45) at (-4.5,-3.8) {Árbol C4.5};
+\node[box] (rf) at (-1.7,-3.8) {Random Forest};
+\node[box] (prediccion) at (-3.1,-4.8) {Predicción común};
+\node[box] (evaluacion) at (0,-5.8) {Evaluación};
+
+\draw[arrow] (datos) -- (carga);
+\draw[arrow] (carga) -- (particion);
+\draw[arrow] (particion) -- (entrenamiento);
+\draw[arrow] (particion) -- (prueba);
+\draw[arrow] (entrenamiento) -- (c45);
+\draw[arrow] (entrenamiento) -- (rf);
+\draw[arrow] (c45) -- (prediccion);
+\draw[arrow] (rf) -- (prediccion);
+\draw[arrow] (prediccion) -- (evaluacion);
+\draw[arrow] (prueba) |- (evaluacion);
+\draw[dashed] (entrenamiento) -- (prueba)
+    node[midway, below, font=\scriptsize] {mismas particiones};
+\end{tikzpicture}
+\caption{Organización de la solución implementada.}
+\label{fig:arquitectura}
+\end{figure}
+
+La preparación comienza con la verificación de integridad de los archivos que se leen desde disco, mediante un resumen criptográfico que detecta cambios en los bytes. Luego se decodifican las etiquetas numéricas de algunos conjuntos para que las clases tengan nombres legibles. La distinción entre atributos numéricos y categóricos se deduce del tipo de columna: los números se tratan como continuos, salvo los booleanos, y el texto y las categorías se tratan como discretos. La partición conserva la proporción de clases y reserva el veinte por ciento para prueba; usa una semilla fija de 42 para que sea reproducible. No se imputan valores faltantes ni se eliminan filas: la implementación de C4.5 los admite y la de Random Forest de scikit-learn los rechaza, como se explica más adelante.
+
+El árbol C4.5 se implementa desde cero con funciones de métricas, una estructura de nodo y una construcción recursiva. Esa implementación conserva los atributos categóricos y elige una rama por categoría, de modo que no necesita una codificación previa. El Random Forest se toma de scikit-learn y se envuelve en un flujo de procesamiento que transforma las categorías en columnas binarias y conserva las columnas numéricas sin escalar. La codificación se ajusta solo con el conjunto de entrenamiento y se aplica después a los casos nuevos; una categoría no vista se representa con ceros. Esa codificación no se aplica a C4.5 porque cambiaría la semántica de la división: una columna binaria por categoría no equivale a una rama por categoría. La comparación se hace entre los modelos ya construidos, no entre sus representaciones internas.
+
+Ambos modelos exponen una operación de predicción con el mismo contrato: recibe una tabla de datos, devuelve una columna con la clase predicha y conserva el índice y el orden de las filas. El contrato no unifica el entrenamiento ni las clases internas: cada modelo conserva su propia representación y su propio orden de clases. Esa separación reduce la dependencia entre las capas y permite comparar ambos modelos sobre las mismas filas de prueba. La evaluación usa las mismas particiones y una semilla fija en la separación y en el Random Forest. Los desempates del árbol son deterministas: se resuelven por el orden de los atributos y por la primera clase observada. El Random Forest se ejecuta con un solo hilo para que el resultado no dependa de la planificación de procesos. Las pruebas del árbol cargan las celdas de definición de su cuaderno, de modo que las definiciones probadas son las que usan los experimentos. Esa organización deja separadas la preparación, la construcción y la evaluación, y permite describir las decisiones de diseño a continuación.
 
 \section{Simulaciones y resultados}
 % TODO: incorporar resultados de experimentos reales.
