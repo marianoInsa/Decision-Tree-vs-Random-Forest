@@ -41,7 +41,7 @@ class PaperBuildTest(unittest.TestCase):
             ("Laura Cornaló Bassan", "00000"),
             ("Matías Fernandez", "24282"),
             ("Mariano Insaurralde", "24684"),
-            ("Philippe Maurel Garcete", "25613"),
+            ("Philippe Maurel", "25613"),
             ("Franco Sanchez", "27310"),
         )
         for author, legajo in authors_and_legajos:
