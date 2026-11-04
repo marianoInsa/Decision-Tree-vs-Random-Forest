@@ -54,7 +54,7 @@ Ingeniería en Sistemas de Información\\
 
 Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión resuelven esta tarea mediante una secuencia de preguntas sobre esas características y producen un modelo que una persona puede leer. C4.5 es uno de los algoritmos más difundidos de la familia: elige cada pregunta con un criterio orientado a separar las clases, acepta atributos numéricos y categóricos, tolera datos faltantes e incorpora mecanismos para frenar el crecimiento del árbol y evitar que se ajuste en exceso al conjunto de entrenamiento \cite{liu2011}. Cada camino de la raíz a una hoja equivale a una regla del tipo ``si se cumple tal condición, se predice tal clase'', de modo que las decisiones del modelo pueden explicarse y revisarse sin herramientas adicionales.
 
-Un árbol aislado es sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final es la más votada entre todos los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión mejora y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
+Un árbol aislado es sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final se obtiene combinando las respuestas de los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión puede mejorar y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
 
 Ninguno de los dos enfoques domina al otro en general. Si el problema es sencillo o hay que justificar cada decisión, un árbol puede bastar; si lo que importa es la precisión y no se exige explicar casos individuales, el bosque suele ser la opción más razonable. Ahora bien, la comparación solo es válida si ambos modelos se entrenan y prueban sobre las mismas particiones, se miden con las mismas métricas y ninguno accede a información del conjunto de prueba durante el entrenamiento. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo.
 
@@ -148,7 +148,38 @@ El C4.5 original también aplica poda de reglas, que acorta las condiciones de c
 Las definiciones anteriores establecen con qué criterio C4.5 evalúa una división, pero no determinan el orden de las decisiones ni cómo se recorre el árbol. Eso corresponde al procedimiento de construcción y predicción de la sección 3. Dos implementaciones pueden compartir todas las fórmulas y aun así diferir en los desempates, en las condiciones de parada o en el tratamiento de los valores faltantes. La subsección siguiente presenta Random Forest, que combina árboles de decisión con otro criterio de división.
 
 \subsection{Random Forest}
-% TODO: redactar la base teórica y citar \cite{breiman2001,scikitRF}.
+
+Random Forest es un método de ensamble que combina muchos árboles de decisión para reducir la dependencia de una sola estructura. Un árbol aislado puede cambiar de forma ante variaciones pequeñas en el conjunto de entrenamiento, porque cada división se elige con los casos disponibles en ese nodo \cite{liu2011}. El ensamble reemplaza esa única estructura por un conjunto de árboles construidos con perturbaciones aleatorias. Cada árbol se representa como $h(x,\Theta_k)$, donde $\Theta_k$ es un vector aleatorio que determina la muestra y los atributos disponibles en su construcción \cite{breiman2001}. Los vectores $\Theta_k$ se generan de forma independiente y con la misma distribución. La predicción final no depende de un árbol individual, sino de la combinación de todos ellos.
+
+La aleatoriedad del ensamble proviene de dos fuentes. La primera es el muestreo con reemplazo: cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, de modo que algunos casos aparecen varias veces y otros quedan fuera \cite{breiman2001}. La segunda es la selección de atributos: en cada división, el árbol evalúa solo un subconjunto aleatorio de los atributos disponibles, y no todos \cite{breiman2001}. Esa restricción reduce la probabilidad de que un atributo dominante determine todas las divisiones y favorece que los árboles difieran entre sí. Cada rama se expande hasta que su hoja es pura o no se encuentra una división válida entre los atributos considerados; no se poda \cite{breiman2001}. La profundidad máxima no se limita y la cantidad de atributos por división se fija como parámetro.
+
+Para clasificar un caso nuevo, cada árbol emite un voto por una clase y el bosque asigna la clase más votada. Si $B$ es la cantidad de árboles y $h_k(x)$ la clase que predice el árbol $k$ para el caso $x$, la predicción del ensamble se define en la ecuación~\eqref{eq:voto-mayoritario} \cite{breiman2001}.
+\begin{equation}
+\hat{y}(x) = \operatorname*{arg\,max}_{c} \sum_{k=1}^{B} \mathbf{1}[h_k(x)=c]
+\label{eq:voto-mayoritario}
+\end{equation}
+El voto es uniforme: todos los árboles pesan lo mismo, con independencia de su profundidad o de su desempeño individual. En scikit-learn, los empates se resuelven con el orden de las clases \cite{scikitRF}. La votación convierte un conjunto de respuestas individuales en una sola etiqueta.
+
+Para analizar el comportamiento del ensamble, Breiman define el margen de un caso como la diferencia entre la probabilidad de la clase correcta y la mayor probabilidad de una clase incorrecta, según la ecuación~\eqref{eq:margen} \cite{breiman2001}.
+\begin{equation}
+mr(x,y) = P_\Theta(h(x,\Theta)=y) - \max_{j\ne y} P_\Theta(h(x,\Theta)=j)
+\label{eq:margen}
+\end{equation}
+En la ecuación, $P_\Theta$ indica la probabilidad sobre los vectores aleatorios que generan los árboles. Un margen positivo indica que, en promedio, los árboles votan por la clase correcta con mayor frecuencia que por cualquier otra; un margen negativo indica lo contrario. La fuerza del ensamble es el valor esperado $E_{X,Y}$ del margen sobre la distribución de los casos y las clases, ecuación~\eqref{eq:strength}.
+\begin{equation}
+s = E_{X,Y}[mr(X,Y)]
+\label{eq:strength}
+\end{equation}
+Cuanto mayor es la fuerza, más separación media existe entre la clase correcta y las alternativas, y la correlación media $\bar{\rho}$ mide cuánto se parecen los márgenes de dos árboles cualesquiera. La cota de la ecuación~\eqref{eq:cota}, para $s>0$, relaciona el error de generalización $PE^*$, es decir, la probabilidad de que el margen sea negativo, con esas dos cantidades: un error menor se asocia con árboles fuertes y poco correlacionados \cite{breiman2001}.
+\begin{equation}
+PE^* \le \frac{\bar{\rho}(1-s^2)}{s^2}
+\label{eq:cota}
+\end{equation}
+La cota explica de qué depende el error, pero no se usa para calcularlo; su utilidad es orientar el diseño del ensamble. Cuando la cantidad de árboles crece, el error de generalización converge a un límite, de modo que agregar árboles no lo incrementa de forma sistemática \cite{breiman2001}.
+
+El muestreo con reemplazo deja fuera de cada árbol, en promedio, cerca de un tercio de los casos. Se los denomina casos fuera de la bolsa y no participan en la construcción de ese árbol. Si se predice cada caso solo con los árboles que no lo vieron, se obtiene una estimación del error de generalización sin separar un conjunto de prueba adicional \cite{breiman2001}. La estimación es interna al entrenamiento y puede calcularse durante la construcción del bosque. En este trabajo se usa como referencia y no como sustituto de la partición de prueba independiente, que se reserva para comparar modelos.
+
+Como configuración base, el Random Forest de scikit-learn usa cien árboles y crecimiento sin límite de profundidad \cite{scikitRF}. En cada división evalúa la raíz cuadrada del número de atributos y usa el criterio de Gini; cada árbol se entrena con muestreo con reemplazo. La ecuación~\eqref{eq:voto-mayoritario} describe el voto duro; la biblioteca, en cambio, promedia las probabilidades de los árboles y devuelve la clase con mayor probabilidad media \cite{scikitRF}. Ambas reglas coinciden cuando cada árbol asigna probabilidad uno a su clase. El criterio de Gini evalúa una división con la impureza de los nodos resultantes, calculada como la probabilidad de clasificar mal un caso elegido al azar y etiquetado según la distribución del nodo \cite{scikitRF}. La semilla y el número de hilos se fijan para que la ejecución sea reproducible. La descripción del algoritmo se presenta en la sección 3 y la de la implementación en la sección 4.
 
 \section{Breve descripción de los algoritmos desarrollados}
 % TODO: completar cuando estén implementados.
