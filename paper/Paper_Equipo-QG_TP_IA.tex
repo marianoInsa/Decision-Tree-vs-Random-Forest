@@ -29,7 +29,21 @@ Ingeniería en Sistemas de Información\\
 \end{abstract}
 
 \section{Introducción}
-% TODO: redactar introducción.
+
+Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión resuelven esta tarea mediante una secuencia de preguntas sobre esas características y producen un modelo que una persona puede leer. C4.5 es uno de los algoritmos más difundidos de la familia: elige cada pregunta con un criterio orientado a separar las clases, acepta atributos numéricos y categóricos, tolera datos faltantes e incorpora mecanismos para frenar el crecimiento del árbol y evitar que se ajuste en exceso al conjunto de entrenamiento \cite{liu2011}. Cada camino de la raíz a una hoja equivale a una regla del tipo ``si se cumple tal condición, se predice tal clase'', de modo que las decisiones del modelo pueden explicarse y revisarse sin herramientas adicionales.
+
+Un árbol aislado es sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final es la más votada entre todos los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión mejora y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
+
+Ninguno de los dos enfoques domina al otro en general. Si el problema es sencillo o hay que justificar cada decisión, un árbol puede bastar; si lo que importa es la precisión y no se exige explicar casos individuales, el bosque suele ser la opción más razonable. Ahora bien, la comparación solo es válida si ambos modelos se entrenan y prueban sobre las mismas particiones, se miden con las mismas métricas y ninguno accede a información del conjunto de prueba durante el entrenamiento. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo.
+
+% Reemplazar [DATASET PENDIENTE] cuando la cátedra informe el conjunto de datos.
+Este trabajo realiza esa comparación sobre el conjunto de datos [DATASET PENDIENTE]. Se implementa desde cero un árbol de decisión basado en C4.5 y se lo contrasta con el Random Forest de scikit-learn \cite{scikitRF}. Programar el árbol propio permite controlar y justificar cada decisión de construcción, mientras que el bosque de scikit-learn sirve de referencia de un método de ensamble de uso extendido. Los dos modelos se evalúan con las mismas particiones y métricas, y para cada uno se prueban varias configuraciones de parámetros con el fin de ver cómo responde su comportamiento.
+
+El objetivo es determinar en qué condiciones conviene cada modelo, atendiendo a la precisión, pero también a la estabilidad de las predicciones, al tiempo de cómputo y a qué tan interpretable resulta cada uno. El diseño experimental busca que las diferencias observadas puedan atribuirse a los algoritmos y no a las condiciones de la prueba. De fondo está la idea de que la mayor complejidad de un bosque no garantiza una mejora: esta depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
+
+Las contribuciones son una implementación propia de C4.5, con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento del árbol \cite{liu2011}; un esquema de evaluación común para ambos modelos; y un análisis comparativo de los cuatro aspectos mencionados, que puede orientar la elección entre árbol y bosque en problemas similares.
+
+El resto del trabajo se organiza así: la sección 2 expone los fundamentos teóricos de C4.5 y Random Forest; la sección 3 describe brevemente los algoritmos desarrollados; la sección 4 presenta la solución implementada y los problemas encontrados; la sección 5 reúne las simulaciones y sus resultados; y la sección 6 discute las conclusiones. Las referencias cierran el documento.
 
 \section{Fundamentos teóricos}
 
