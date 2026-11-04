@@ -182,7 +182,65 @@ El muestreo con reemplazo deja fuera de cada árbol, en promedio, cerca de un te
 Como configuración base, el Random Forest de scikit-learn usa cien árboles y crecimiento sin límite de profundidad \cite{scikitRF}. En cada división evalúa la raíz cuadrada del número de atributos y usa el criterio de Gini; cada árbol se entrena con muestreo con reemplazo. La ecuación~\eqref{eq:voto-mayoritario} describe el voto duro; la biblioteca, en cambio, promedia las probabilidades de los árboles y devuelve la clase con mayor probabilidad media \cite{scikitRF}. Ambas reglas coinciden cuando cada árbol asigna probabilidad uno a su clase. El criterio de Gini evalúa una división con la impureza de los nodos resultantes, calculada como la probabilidad de clasificar mal un caso elegido al azar y etiquetado según la distribución del nodo \cite{scikitRF}. La semilla y el número de hilos se fijan para que la ejecución sea reproducible. La descripción del algoritmo se presenta en la sección 3 y la de la implementación en la sección 4.
 
 \section{Breve descripción de los algoritmos desarrollados}
-% TODO: completar cuando estén implementados.
+
+Las secciones anteriores definieron los criterios y las fórmulas de ambos modelos. Esta sección describe cómo se aplican esos criterios en la construcción y la predicción. Primero se presenta el procedimiento de C4.5, con su pseudocódigo y las decisiones que lo completan. Después se describe el procedimiento de Random Forest y se cierra con una transición a la solución implementada.
+
+\subsection{C4.5}
+
+El árbol de C4.5 se construye de forma recursiva, dividiendo el conjunto de casos de cada nodo en subconjuntos más pequeños. La entrada del procedimiento es un conjunto de casos con sus clases, los atributos disponibles, los pesos que indican cuánto aporta cada caso y la profundidad del nodo. La salida es un nodo que puede ser una hoja, si se cumple una condición de parada, o un nodo de decisión con un atributo, un umbral o un conjunto de ramas. En cada llamada se calculan los conteos ponderados por clase y se elige la clase mayoritaria, que se usará si el nodo termina como hoja. Luego se evalúan las divisiones posibles y se continúa por cada rama con el subconjunto correspondiente. El procedimiento se repite hasta que todas las ramas alcanzan una hoja \cite{liu2011}. El algoritmo~\ref{alg:c45} resume esa construcción.
+
+El pseudocódigo muestra el orden de las decisiones, desde el cálculo de la clase mayoritaria hasta la creación recursiva de los hijos. El cuerpo se organiza en tres bloques: preparación del nodo, selección del atributo y expansión recursiva. Los pasos se numeran para ordenar la exposición y reflejan las decisiones adoptadas en este trabajo. La descripción se concentra en las decisiones que afectan el resultado y no en los detalles de programación. El procedimiento usa conteos ponderados en lugar de conteos simples, porque un caso con valores faltantes puede repartirse entre varias ramas con peso fraccionario.
+
+\begin{algorithm}[!t]
+\caption{Construcción recursiva de un árbol C4.5}
+\label{alg:c45}
+\begin{algorithmic}[1]
+\REQUIRE Casos $D$ con clases, atributos $A$, pesos $w$, profundidad $d$ (la raíz tiene $d=0$), profundidad máxima, masa mínima, umbral de ganancia y tasa mínima.
+\ENSURE Nodo del árbol.
+\STATE Calcular la masa por clase y elegir la clase mayoritaria.
+\STATE Inicializar un nodo con esa clase.
+\IF{hay una sola clase o $A$ está vacío}
+    \RETURN el nodo.
+\ENDIF
+\IF{$d$ alcanzó el máximo o la masa es menor que el mínimo}
+    \RETURN el nodo.
+\ENDIF
+\STATE Inicializar el mejor candidato como vacío.
+\FOR{atributo $a \in A$}
+    \IF{$a$ es numérico}
+        \STATE Ordenar los valores observados y evaluar cada valor salvo el máximo.
+    \ELSE
+        \STATE Evaluar una rama por cada categoría conocida con masa positiva; se requieren al menos dos.
+    \ENDIF
+    \STATE Calcular la tasa de ganancia ajustada por faltantes.
+    \STATE Conservar la mayor tasa; desempatar por el orden de los atributos y, entre cortes numéricos, por el menor umbral.
+\ENDFOR
+\IF{no hay candidato o la ganancia o la tasa no alcanzan sus mínimos}
+    \RETURN el nodo.
+\ENDIF
+\STATE Convertirlo en nodo de decisión y registrar el atributo, el umbral o las ramas y las proporciones.
+\STATE Si el atributo es categórico, eliminarlo de $A$; si es numérico, conservarlo.
+\FOR{rama}
+    \STATE Formar el subconjunto conocido y repartir los faltantes con peso proporcional.
+    \STATE Construir el hijo con el subconjunto, los atributos, los pesos y $d+1$.
+\ENDFOR
+\RETURN el nodo.
+\end{algorithmic}
+\end{algorithm}
+
+Las paradas se evalúan en un orden fijo: primero la clase pura y el agotamiento de atributos, después la profundidad máxima y la masa mínima. La masa mínima se compara con la suma de pesos y no con la cantidad de filas, de modo que las copias fraccionarias no inflan la evidencia del nodo. Para cada atributo se evalúan todas las particiones candidatas y se conserva la de mayor tasa de ganancia ajustada. La comparación con el umbral de ganancia ajustada y con la tasa mínima es estricta: si el valor es menor, se detiene; la igualdad permite dividir. Los empates se resuelven por el orden de los atributos y, entre cortes numéricos del mismo atributo, por el menor umbral.
+
+La predicción recorre el árbol desde la raíz hasta una hoja. Si el atributo de decisión tiene un valor conocido, el caso sigue la rama correspondiente: para un atributo numérico se compara con el umbral y para uno categórico se busca la categoría. Si el valor falta, el caso no se asigna a una sola rama: se combinan las distribuciones de todas las ramas con las proporciones aprendidas, como indica la ecuación~\eqref{eq:mezcla-prediccion}. Si aparece una categoría que no se vio en ese nodo, se usan las frecuencias locales del nodo alcanzado. La clase final es la de mayor probabilidad, y los empates se resuelven con la primera clase observada en el entrenamiento. Las probabilidades son frecuencias ponderadas y no están calibradas.
+
+El costo de construcción depende de la cantidad de atributos y de casos de cada nodo. Para un atributo numérico se ordenan sus valores observados, operación de costo $O(|D|\log |D|)$, y se evalúan $r-1$ cortes, donde $r$ es la cantidad de valores distintos. Esa evaluación se repite en cada nodo y para cada atributo, de modo que el entrenamiento puede ser más costoso que el de un árbol que solo considera atributos categóricos. El crecimiento es codicioso: en cada nodo se elige la mejor división disponible y no se vuelve a evaluar esa decisión. El árbol resultante puede ser profundo y ajustarse en exceso al entrenamiento \cite{liu2011}, y este trabajo no implementa pospoda ni poda de reglas para corregirlo. La única protección es la prepoda descrita, que puede detener el crecimiento antes de lo conveniente.
+
+\subsection{Random Forest}
+
+El procedimiento de Random Forest construye $B$ árboles, uno por cada muestra obtenida con reemplazo del conjunto de entrenamiento. Cada árbol se entrena con un subconjunto aleatorio de atributos en cada división y crece sin poda, como se describió en la sección 2.2. La cantidad de árboles y la cantidad de atributos por división son parámetros del método. La predicción combina los votos de los árboles o, en la implementación de scikit-learn, el promedio de sus probabilidades \cite{scikitRF}. El resultado es un modelo que depende del conjunto de árboles y no de una sola estructura \cite{breiman2001}.
+
+La diferencia con un árbol único está en la fuente de variabilidad. Un árbol construido con todos los atributos y todos los casos puede cambiar ante pequeñas modificaciones de los datos; el bosque introduce aleatoriedad en la muestra y en los atributos de cada división para que los árboles no sean idénticos. Esa diversidad reduce la correlación entre los árboles y permite que el voto o el promedio combine respuestas distintas. La combinación no garantiza por sí sola un mejor desempeño: el resultado depende de la fuerza de los árboles y de su correlación, como indica la cota de la ecuación~\eqref{eq:cota} \cite{breiman2001}. Por eso la comparación con el árbol único debe hacerse con las mismas particiones y métricas, y no a partir de una expectativa general.
+
+El costo de entrenamiento del bosque suele ser mayor que el de un árbol único, porque se construyen $B$ árboles y cada uno recorre sus propios candidatos de división. La predicción también requiere recorrer todos los árboles y combinar sus respuestas. A cambio, la decisión deja de poder seguirse en un solo camino de la raíz a una hoja, porque el resultado depende del conjunto de árboles. La solución implementada organiza ambos modelos y resuelve los problemas técnicos que aparecen al integrarlos. La sección siguiente describe esa organización.
 
 \section{Solución implementada}
 % TODO: describir la solución y los problemas encontrados.
