@@ -46,14 +46,17 @@ Ingeniería en Sistemas de Información\\
 \maketitle
 
 \begin{abstract}
-Se compara el rendimiento de un árbol de decisión C4.5 implementado desde cero con el modelo Random Forest de scikit-learn en problemas de clasificación. Ambos modelos se entrenan y evalúan sobre las mismas particiones estratificadas y con las mismas métricas. El análisis considera la tasa de acierto, la estabilidad de las predicciones, el tiempo de cómputo y la interpretabilidad. Los resultados se discuten en función del problema y del costo de cada modelo.
-\keywords{árbol de decisión \and C4.5 \and Random Forest}
+% TODO: Redactar abstract al final.
+hola soy un abstract
+
+\keywords{Árbol de Decisión \and C4.5 \and Random Forest}
 \end{abstract}
 
 \section{Introducción}
 
 Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión producen un modelo legible, en el que cada camino de la raíz a una hoja equivale a una regla \cite{liu2011}. Random Forest combina muchos árboles para reducir la dependencia de una sola estructura, a cambio de más cómputo y de una decisión que ya no se sigue en un único camino \cite{breiman2001}. C4.5 elige cada pregunta con un criterio orientado a separar las clases y admite atributos numéricos y categóricos \cite{liu2011}. Ninguno de los dos enfoques domina al otro en general: la elección depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
 
+% TODO: agregar el dataset que nos proporcione la cátedra.
 Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos [DATASET PENDIENTE]. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
 
 Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos.
@@ -87,13 +90,15 @@ La ganancia favorece a los atributos con muchos valores distintos, porque fragme
 
 Los atributos numéricos requieren un tratamiento distinto. En cada nodo se ordenan los valores observados, operación de costo $O(|D|\log |D|)$, y se examinan los $r-1$ cortes entre valores consecutivos; cada corte separa los casos con $A\le t$ de los que tienen $A>t$. Se conserva el corte con la mayor tasa de ganancia. El umbral es un valor observado y se elige en cada nodo, sin discretización global. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse \cite{liu2011}.
 
-Con valores faltantes, sea $W_K$ la masa de los casos con valor conocido para el atributo y $W_U$ la de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, ecuación~\eqref{eq:ganancia-ajustada}. La información de la partición agrega la masa faltante $W_U$ como una rama de cálculo, aunque no origine una rama del árbol. La tasa de ganancia ajustada es el cociente entre la ganancia ajustada y esa información de la partición. En el entrenamiento, un caso faltante se envía a todas las ramas y su peso se reparte según $q_j=W_j/W_K$, ecuación~\eqref{eq:proporcion-rama}; en la predicción, las probabilidades de las ramas se combinan con esas mismas proporciones \cite{liu2011}. Como el conjunto usado está completo, este mecanismo no interviene en la comparación; la implementación de Random Forest usada no admite faltantes.
+Con valores faltantes, sea $W_K$ la masa de los casos con valor conocido para el atributo y $W_U$ la de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, ecuación~\eqref{eq:ganancia-ajustada}. La información de la partición agrega la masa faltante $W_U$ como una rama de cálculo, aunque no origine una rama del árbol. La tasa de ganancia ajustada es el cociente entre la ganancia ajustada y esa información de la partición. En el entrenamiento, un caso faltante se envía a todas las ramas y su peso se reparte según $q_j=W_j/W_K$, ecuación~\eqref{eq:proporcion-rama}; en la predicción, las probabilidades de las ramas se combinan con esas mismas proporciones \cite{liu2011}.
 \begin{align}
 \Gain^*(D,A) &= \frac{W_K}{W}\left[H(D_K) - \sum_j \frac{W_j}{W_K}H(D_j)\right],
 \label{eq:ganancia-ajustada}\\
 q_j &= \frac{W_j}{W_K}.
 \label{eq:proporcion-rama}
 \end{align}
+Este mecanismo es propio de C4.5.
+% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del conjunto de entrenamiento y perder capacidad sobre casos nuevos. La prepoda detiene el crecimiento durante la construcción; la pospoda elimina subárboles después de construir el árbol completo. El C4.5 original emplea pospoda pesimista, mientras que este trabajo aplica solo prepoda y no implementa poda de reglas \cite{liu2011}. La construcción es codiciosa: cada división se elige con la información disponible en el nodo y no se revisa después, de modo que la prepoda puede detener el crecimiento antes de lo conveniente.
 
@@ -101,7 +106,10 @@ Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del 
 
 Random Forest combina $B$ árboles de decisión construidos con perturbaciones aleatorias \cite{breiman2001}. Cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, obtenida con reemplazo, y en cada división evalúa solo un subconjunto aleatorio de los atributos disponibles. Los árboles crecen sin poda y la predicción combina sus respuestas por voto mayoritario o por promedio de probabilidades. Esa doble fuente de aleatoriedad reduce la dependencia de una sola estructura y la correlación entre los árboles.
 
-Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}. La fuerza resume la separación media entre la clase correcta y las alternativas, y la correlación mide cuánto se parecen las respuestas de dos árboles. El análisis de este trabajo es empírico y no usa esa caracterización para calcular el error. En este trabajo se usa la implementación de scikit-learn; su configuración se detalla en la sección 5.
+Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}. La fuerza resume la separación media entre la clase correcta y las alternativas, y la correlación mide cuánto se parecen las respuestas de dos árboles. El análisis de este trabajo es empírico y no usa esa caracterización para calcular el error. En este trabajo se usa la implementación de scikit-learn (...); su configuración se detalla en la sección 5.
+% TODO: agregar qué método específico de scikit-learn se utiliza
+
+% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 \section{Breve descripción de los algoritmos desarrollados}
 
@@ -135,43 +143,42 @@ Los empates se resuelven por el orden de los atributos y, entre cortes numérico
 
 \subsection{Random Forest}
 
-La implementación de Random Forest usa scikit-learn y combina las probabilidades de los árboles. Su configuración se detalla en la sección 5.
+La implementación de Random Forest usa scikit-learn ...
+% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 \section{Descripción de la solución implementada}
 
 \subsection{Arquitectura y protocolo de evaluación}
 
-La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La preparación carga el conjunto de datos, deduce el tipo de cada atributo y construye una partición estratificada con el 80\% de los casos para entrenamiento y el 20\% para prueba, con una semilla fija de 42. Ambos modelos usan las mismas particiones y las mismas métricas, y ninguno accede al conjunto de prueba durante el entrenamiento. No se imputan valores faltantes ni se eliminan filas: C4.5 admite faltantes y categorías nativas, mientras que Random Forest se entrena solo con datos completos y transforma las categorías en columnas binarias dentro de su flujo.
+La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La preparación carga el conjunto de datos, deduce el tipo de cada atributo y construye una partición estratificada con el 80\% de los casos para entrenamiento y el 20\% para prueba, con una semilla fija de 42. Ambos modelos usan las mismas particiones y las mismas métricas, y ninguno accede al conjunto de prueba durante el entrenamiento. C4.5 admite valores faltantes y categorías nativas. El tratamiento de valores faltantes en Random Forest se definirá junto con la implementación de ese modelo. Random Forest transforma las categorías en columnas binarias dentro de su flujo.
+% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
-La codificación de Random Forest se ajusta solo con el conjunto de entrenamiento y una categoría no vista se representa con ceros; C4.5 conserva una rama por categoría. Esa diferencia de preprocesamiento es una posible fuente de sesgo en la comparación y se retoma al interpretar los resultados. Ambos modelos exponen el mismo contrato de predicción: reciben una tabla de datos, devuelven una columna con la clase predicha y conservan el índice y el orden de las filas sin modificar la entrada. La validación exige las mismas columnas y tipos del entrenamiento, y los desempates del árbol son deterministas. Las probabilidades del árbol son frecuencias ponderadas y no están calibradas.
+La codificación de Random Forest se ajusta solo con el conjunto de entrenamiento y una categoría no vista se representa con ceros; C4.5 conserva una rama por categoría. Esas diferencias de preprocesamiento son una posible fuente de sesgo en la comparación y se retoman al interpretar los resultados. Ambos modelos exponen el mismo contrato de predicción: reciben una tabla de datos, devuelven una columna con la clase predicha y conservan el índice y el orden de las filas sin modificar la entrada. La validación exige las mismas columnas y tipos del entrenamiento, y los desempates del árbol son deterministas. Las probabilidades del árbol son frecuencias ponderadas y no están calibradas.
 
 \subsection{Decisiones de diseño y problemas encontrados}
 
-Los principales problemas fueron el tratamiento de atributos continuos, los valores faltantes, el control del crecimiento y la comparabilidad del preprocesamiento. La Tabla~\ref{tab:decisiones} resume las decisiones adoptadas. Las pruebas de cortes, conservación de masa y repetición de particiones respaldan las decisiones de mayor riesgo. El crecimiento se controla con cuatro parámetros independientes: el umbral de ganancia, la profundidad máxima, la masa mínima y la tasa de ganancia mínima; no se implementa pospoda.
+Los principales problemas fueron el tratamiento de atributos continuos, los valores faltantes, el control del crecimiento y la comparabilidad del preprocesamiento. La Tabla~\ref{tab:decisiones} resume los tratamientos adoptados o previstos. Las pruebas de cortes, conservación de masa y repetición de particiones respaldan los tratamientos de mayor riesgo. El crecimiento se controla con cuatro parámetros independientes: el umbral de ganancia, la profundidad máxima, la masa mínima y la tasa de ganancia mínima; no se implementa pospoda.
 
 \begin{table}[!ht]
 \centering
-\caption{Problemas técnicos y decisiones adoptadas.}
+\caption{Problemas técnicos y tratamientos adoptados o previstos.}
 \label{tab:decisiones}
 \footnotesize
 \begin{tabular}{@{}p{0.28\textwidth}p{0.64\textwidth}@{}}
 \toprule
-Problema & Decisión \\
+Problema & Tratamiento \\
 \midrule
 Atributos continuos & Cortes binarios en valores observados; sin grilla global \\
-Valores faltantes & Reparto con peso proporcional y ganancia ajustada; la implementación de \mbox{Random Forest} no los admite \\
+Valores faltantes & C4.5 los reparte con peso proporcional \\
 Crecimiento & Prepoda con cuatro controles; sin pospoda \\
 Preprocesamiento & Categorías nativas en C4.5; codificación binaria en \mbox{Random Forest} \\
 \bottomrule
 \end{tabular}
 \end{table}
+% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 \section{Simulaciones y resultados}
-
-\subsection{Configuración experimental}
-
-El Random Forest de scikit-learn se configura con cien árboles, crecimiento sin límite de profundidad, la raíz cuadrada del número de atributos por división y la impureza de Gini \cite{scikitRF}. Cada árbol se entrena con muestreo con reemplazo y la predicción promedia las probabilidades. La semilla se fija y Random Forest se ejecuta con un solo hilo para que el tiempo de cómputo no dependa de la planificación de procesos.
-% TODO: incorporar resultados de experimentos reales.
+% TODO: incorporar configuración experimental y resultados de experimentos.
 
 \section{Conclusiones}
 % TODO: redactar conclusiones después de analizar los resultados.
