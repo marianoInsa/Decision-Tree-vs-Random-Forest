@@ -3,6 +3,28 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb}
 \usepackage{url}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{booktabs}
+
+\DeclareMathOperator{\Gain}{Gain}
+\DeclareMathOperator{\SplitInfo}{SplitInfo}
+\DeclareMathOperator{\GainRatio}{GainRatio}
+
+\floatname{algorithm}{Algoritmo}
+
+\renewcommand{\algorithmicrequire}{\textbf{Entrada:}}
+\renewcommand{\algorithmicensure}{\textbf{Salida:}}
+\renewcommand{\algorithmicif}{\textbf{si}}
+\renewcommand{\algorithmicthen}{\textbf{entonces}}
+\renewcommand{\algorithmicelse}{\textbf{en otro caso}}
+\renewcommand{\algorithmicendif}{\textbf{fin si}}
+\renewcommand{\algorithmicfor}{\textbf{para cada}}
+\renewcommand{\algorithmicdo}{\textbf{hacer}}
+\renewcommand{\algorithmicendfor}{\textbf{fin para}}
+\renewcommand{\algorithmicreturn}{\textbf{devolver}}
 
 \begin{document}
 
@@ -47,8 +69,83 @@ El resto del trabajo se organiza así: la sección 2 expone los fundamentos teó
 
 \section{Fundamentos teóricos}
 
+La introducción presentó los dos modelos y el problema de comparación que motiva el trabajo. En esta sección se fijan los conceptos y las fórmulas que usan las secciones siguientes, cada uno definido una sola vez. Se parte del criterio de construcción de un árbol de decisión, con el manejo de atributos continuos, valores faltantes y poda. Luego se expone la lógica del ensamble Random Forest y las nociones de margen, fuerza y cota que lo acompañan.
+
 \subsection{Árboles de decisión y C4.5}
-% TODO: redactar la base teórica y citar \cite{liu2011}.
+
+Un árbol de decisión clasifica un caso haciéndole preguntas sucesivas sobre sus atributos. Cada pregunta ocupa un nodo interno y reparte los casos en grupos; cada hoja guarda la clase que se asigna a los casos que llegan hasta ella. El camino de la raíz a una hoja es una regla, como se indicó en la introducción, de modo que el árbol completo equivale a un conjunto de reglas. Un caso de entrenamiento con todos sus atributos conocidos recorre un único camino, así que, si no se podan las reglas, el árbol produce reglas mutuamente exclusivas y exhaustivas para esos casos \cite{liu2011}. Para decidir qué preguntar hace falta medir cuán mezcladas están las clases dentro de un nodo, magnitud que se llama impureza: un nodo puro contiene una sola clase y uno impuro reparte sus casos entre varias. C4.5 construye el árbol de forma recursiva y elige cada pregunta según esa medida.
+
+La entropía mide la impureza de un conjunto de casos a partir de la distribución de sus clases. Sea $D$ el conjunto de casos de un nodo, $C$ el conjunto de clases y $p_c$ la proporción de casos de la clase $c$, medida por masa cuando los pesos no son unitarios. La entropía, expresada en bits, está dada por la ecuación~\eqref{eq:entropia} \cite{liu2011}.
+\begin{equation}
+H(D) = -\sum_{c \in C} p_c \log_2 p_c
+\label{eq:entropia}
+\end{equation}
+Se adopta la convención $0\log_2 0=0$ para que las clases ausentes no produzcan indeterminaciones. La entropía vale cero cuando todos los casos son de una misma clase y alcanza su máximo cuando las clases tienen proporciones iguales. Sobre esta medida se evalúa cada pregunta posible.
+
+Una pregunta sobre un atributo $A$ divide $D$ en $v$ subconjuntos $D_j$. Cada caso tiene un peso, que inicialmente es uno, y la masa de un conjunto es la suma de esos pesos: $W_j$ es la masa de $D_j$ y $W$ la de $D$. La impureza que queda tras la división es el promedio de sus entropías, ponderado por la masa de cada subconjunto. Sin valores faltantes, la entropía de la partición resulta de la ecuación~\eqref{eq:entropia-particion}.
+\begin{equation}
+H_A(D) = \sum_{j=1}^{v} \frac{W_j}{W} H(D_j)
+\label{eq:entropia-particion}
+\end{equation}
+La ganancia de información es la reducción de entropía que produce la división, según la ecuación~\eqref{eq:ganancia}.
+\begin{equation}
+\Gain(D,A) = H(D) - H_A(D)
+\label{eq:ganancia}
+\end{equation}
+Cuanto mayor es la ganancia, más puras quedan las ramas, y una ganancia nula indica que la partición no reduce la impureza. Se mide en bits y no es negativa, porque la entropía de la partición es menor o igual que la del conjunto original. Sirve para comparar atributos, pero con un sesgo que corrige el paso siguiente.
+
+La ganancia favorece a los atributos con muchos valores distintos: partir el conjunto en grupos muy pequeños reduce la impureza casi por construcción, aunque las reglas resultantes puedan generalizar mal \cite{liu2011}. C4.5 atenúa este efecto dividiendo la ganancia por la entropía de la propia partición, llamada información de la partición y dada por la ecuación~\eqref{eq:split-info}.
+\begin{equation}
+\SplitInfo(D,A) = -\sum_{j=1}^{v} \frac{W_j}{W}\log_2\frac{W_j}{W}
+\label{eq:split-info}
+\end{equation}
+El cociente entre ambas magnitudes es la tasa de ganancia, ecuación~\eqref{eq:gain-ratio} \cite{liu2011}.
+\begin{equation}
+\GainRatio(D,A) = \frac{\Gain(D,A)}{\SplitInfo(D,A)}
+\label{eq:gain-ratio}
+\end{equation}
+Un atributo que fragmenta mucho el conjunto aumenta el denominador y queda penalizado frente a uno que lo fragmenta menos. Si la partición no produce al menos dos ramas conocidas de masa positiva, el atributo no se considera candidato; sin valores faltantes, eso equivale a un denominador nulo.
+
+Los atributos numéricos no tienen un conjunto finito de categorías y requieren otro tratamiento. En cada nodo, C4.5 ordena los valores observados del atributo, operación de costo $O(|D|\log |D|)$, y examina únicamente los cortes entre valores consecutivos. Si hay $r$ valores distintos, existen $r-1$ particiones binarias posibles, cada una definida por un umbral $t$ que separa los casos con $A \le t$ de los casos con $A > t$ \cite{liu2011}. Sin valores faltantes, para cada umbral se calcula la ganancia de la ecuación~\eqref{eq:ganancia-umbral} y se conserva el corte con la mayor tasa de ganancia.
+\begin{equation}
+\begin{split}
+\Gain(D,A,t) = H(D) - \frac{W_{\le t}}{W}H(D_{\le t})
+- \frac{W_{>t}}{W}H(D_{>t})
+\end{split}
+\label{eq:ganancia-umbral}
+\end{equation}
+El umbral coincide con un valor observado y se elige en cada nodo, de manera que no hay discretización global ni una grilla fijada de antemano. Geométricamente, cada condición $A \le t$ define un semiespacio limitado por un hiperplano perpendicular al eje del atributo, y un árbol que usa solo atributos numéricos parte el espacio en regiones rectangulares alineadas con los ejes. Un atributo numérico puede reutilizarse más abajo, ya que los subconjuntos resultantes pueden admitir nuevos cortes, mientras que un atributo categórico se descarta una vez usado \cite{liu2011}.
+
+Los valores faltantes obligan a distinguir entre la masa total $W$ de un nodo, la masa $W_K$ de los casos que tienen valor para el atributo evaluado y la masa $W_U$ de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, como indica la ecuación~\eqref{eq:ganancia-ajustada} \cite{liu2011}.
+\begin{equation}
+\Gain^*(D,A) = \frac{W_K}{W}\left[H(D_K) - \sum_j \frac{W_j}{W_K}H(D_j)\right]
+\label{eq:ganancia-ajustada}
+\end{equation}
+En ese cálculo, las proporciones de clase se obtienen con las masas y no con los conteos. En la información de la partición, los casos faltantes cuentan como una rama más dentro del cálculo, aunque no den lugar a una rama del árbol (ecuación~\eqref{eq:split-info-ajustada}).
+\begin{equation}
+\begin{split}
+\SplitInfo^*(D,A) = {}&-\sum_j \frac{W_j}{W}\log_2\frac{W_j}{W}\\
+&-\frac{W_U}{W}\log_2\frac{W_U}{W}
+\end{split}
+\label{eq:split-info-ajustada}
+\end{equation}
+En el entrenamiento, un caso con un valor faltante se envía a todas las ramas y su peso se reparte según las proporciones $q_j$ de la ecuación~\eqref{eq:proporcion-rama}.
+\begin{equation}
+q_j = \frac{W_j}{W_K}
+\label{eq:proporcion-rama}
+\end{equation}
+En la predicción, cuando falta el atributo que decide el nodo, las probabilidades de las ramas para un caso $x$ se combinan con esas mismas proporciones, según la ecuación~\eqref{eq:mezcla-prediccion}.
+\begin{equation}
+P(c\mid x) = \sum_j q_j P(c\mid x, \text{rama } j)
+\label{eq:mezcla-prediccion}
+\end{equation}
+La tasa de ganancia se obtiene con la ganancia y la información de la partición ya ajustadas. Con este reparto la masa total se conserva y no se imputa ningún valor.
+
+Un árbol que crece sin restricciones puede terminar ajustándose a rasgos particulares del conjunto de entrenamiento y perder capacidad sobre casos nuevos, fenómeno conocido como sobreajuste. Cuanto más profundo es el árbol, menos casos respaldan cada hoja, y la tasa de acierto sobre el entrenamiento puede seguir subiendo sin que lo haga la tasa de acierto sobre datos nuevos. La poda limita ese riesgo de dos maneras. La prepoda detiene el crecimiento durante la construcción; la pospoda elimina subárboles una vez construido el árbol completo. La prepoda evita construir subárboles que luego se descartarían, mientras que la pospoda requiere construir el árbol completo antes de evaluarlo. El C4.5 original emplea pospoda pesimista, basada en una estimación del error, y la pospoda suele preferirse porque evalúa cada subárbol ya desarrollado \cite{liu2011}.
+
+El C4.5 original también aplica poda de reglas, que acorta las condiciones de cada regla y puede romper su exclusividad mutua y su carácter exhaustivo \cite{liu2011}. La prepoda tiene un inconveniente conocido como efecto de horizonte: puede frenar el crecimiento antes de tiempo, porque en ese momento no se ve lo que aportaría el subárbol completo. Hallar el árbol óptimo, pequeño y preciso a la vez, es un problema NP-completo \cite{liu2011}. No se conoce un algoritmo eficiente que lo resuelva en todos los casos, así que C4.5 elige en cada nodo la división de mayor tasa de ganancia y no vuelve a evaluar esa decisión durante la construcción; la pospoda actúa sobre los subárboles. Este trabajo adopta solamente prepoda y no implementa pospoda ni poda de reglas; las consecuencias de esa decisión se discuten en la sección 4.
+
+Las definiciones anteriores establecen con qué criterio C4.5 evalúa una división, pero no determinan el orden de las decisiones ni cómo se recorre el árbol. Eso corresponde al procedimiento de construcción y predicción de la sección 3. Dos implementaciones pueden compartir todas las fórmulas y aun así diferir en los desempates, en las condiciones de parada o en el tratamiento de los valores faltantes. La subsección siguiente presenta Random Forest, que combina árboles de decisión con otro criterio de división.
 
 \subsection{Random Forest}
 % TODO: redactar la base teórica y citar \cite{breiman2001,scikitRF}.
