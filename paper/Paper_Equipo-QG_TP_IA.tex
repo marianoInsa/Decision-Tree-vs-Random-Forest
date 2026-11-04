@@ -38,8 +38,7 @@ Matías Fernandez\inst{1}\textsuperscript{[24282]} \and
 Mariano Insaurralde\inst{1}\textsuperscript{[24684]} \and
 Philippe Maurel Garcete\inst{1}\textsuperscript{[25613]} \and
 Franco Sanchez\inst{1}\textsuperscript{[27310]}}
-\authorrunning{L. Cornaló Bassan, M. Fernandez, M. Insaurralde,
-P. Maurel Garcete, F. Sanchez}
+\authorrunning{L. Cornaló Bassan, M. Fernandez, M. Insaurralde}
 
 \institute{Universidad Tecnológica Nacional, Facultad Regional de Resistencia\\
 Ingeniería en Sistemas de Información\\
@@ -49,14 +48,14 @@ Ingeniería en Sistemas de Información\\
 
 \begin{abstract}
 % TODO: redactar resumen.
-\keywords{Decision Tree \and C4.5 \and Random Forest}
+\keywords{árbol de decisión \and C4.5 \and Random Forest}
 \end{abstract}
 
 \section{Introducción}
 
 Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión resuelven esta tarea mediante una secuencia de preguntas sobre esas características y producen un modelo que una persona puede leer. C4.5 es uno de los algoritmos más difundidos de la familia: elige cada pregunta con un criterio orientado a separar las clases, acepta atributos numéricos y categóricos, tolera datos faltantes e incorpora mecanismos para frenar el crecimiento del árbol y evitar que se ajuste en exceso al conjunto de entrenamiento \cite{liu2011}. Cada camino de la raíz a una hoja equivale a una regla del tipo ``si se cumple tal condición, se predice tal clase'', de modo que las decisiones del modelo pueden explicarse y revisarse sin herramientas adicionales.
 
-Un árbol aislado es sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final se obtiene combinando las respuestas de los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión puede aumentar y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
+Un árbol aislado suele ser sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final se obtiene combinando las respuestas de los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión puede aumentar y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
 
 Ninguno de los dos enfoques domina al otro en general. Si el problema es sencillo o hay que justificar cada decisión, un árbol puede bastar; si lo que importa es la precisión y no se exige explicar casos individuales, el bosque suele ser la opción más razonable. Ahora bien, la comparación solo es válida si ambos modelos se entrenan y prueban sobre las mismas particiones, se miden con las mismas métricas y ninguno accede a información del conjunto de prueba durante el entrenamiento. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo.
 
@@ -67,7 +66,7 @@ El objetivo es determinar en qué condiciones conviene cada modelo, atendiendo a
 
 Las contribuciones son una implementación propia de C4.5, con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento del árbol \cite{liu2011}; un esquema de evaluación común para ambos modelos; y un análisis comparativo de los cuatro aspectos mencionados, que puede orientar la elección entre árbol y bosque en problemas similares.
 
-El resto del trabajo se organiza así: la sección 2 expone los fundamentos teóricos de C4.5 y Random Forest; la sección 3 describe brevemente los algoritmos desarrollados; la sección 4 presenta la solución implementada y los problemas encontrados; la sección 5 reúne las simulaciones y sus resultados; y la sección 6 discute las conclusiones. Las referencias cierran el documento.
+El resto del trabajo se organiza así: la sección 2 expone los fundamentos teóricos de C4.5 y Random Forest; la sección 3 describe brevemente los algoritmos desarrollados; la sección 4 describe la solución implementada y los problemas encontrados; la sección 5 reúne las simulaciones y sus resultados; y la sección 6 discute las conclusiones. Las referencias cierran el documento.
 
 \section{Fundamentos teóricos}
 
@@ -315,7 +314,6 @@ La Tabla~\ref{tab:decisiones} muestra que cada dificultad se resolvió con una d
 \section{Conclusiones}
 % TODO: redactar conclusiones después de analizar los resultados.
 
-\nocite{liu2011,breiman2001,scikitRF}
 \bibliographystyle{splncs04}
 \bibliography{refs}
 
