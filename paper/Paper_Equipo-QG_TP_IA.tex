@@ -1,12 +1,11 @@
 \documentclass[runningheads]{llncs}
 
 \usepackage[T1]{fontenc}
+\usepackage[spanish,es-nosectiondot,es-tabla]{babel}
 \usepackage{amsmath,amssymb}
 \usepackage{url}
 \usepackage{algorithm}
 \usepackage{algorithmic}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning}
 \usepackage{booktabs}
 
 \DeclareMathOperator{\Gain}{Gain}
@@ -14,11 +13,11 @@
 \DeclareMathOperator{\GainRatio}{GainRatio}
 
 \floatname{algorithm}{Algoritmo}
-\renewcommand{\figurename}{Figura}
 \renewcommand{\tablename}{Tabla}
+\renewcommand{\keywordname}{\textbf{Palabras clave:}}
+\renewcommand{\andname}{y}
+\renewcommand{\lastandname}{\unskip, y}
 
-\renewcommand{\algorithmicrequire}{\textbf{Entrada:}}
-\renewcommand{\algorithmicensure}{\textbf{Salida:}}
 \renewcommand{\algorithmicif}{\textbf{si}}
 \renewcommand{\algorithmicthen}{\textbf{entonces}}
 \renewcommand{\algorithmicelse}{\textbf{en otro caso}}
@@ -36,9 +35,9 @@
 \author{Laura Cornaló Bassan\inst{1}\textsuperscript{[00000]} \and
 Matías Fernandez\inst{1}\textsuperscript{[24282]} \and
 Mariano Insaurralde\inst{1}\textsuperscript{[24684]} \and
-Philippe Maurel Garcete\inst{1}\textsuperscript{[25613]} \and
+Philippe Maurel\inst{1}\textsuperscript{[25613]} \and
 Franco Sanchez\inst{1}\textsuperscript{[27310]}}
-\authorrunning{L. Cornaló Bassan, M. Fernandez, M. Insaurralde}
+\authorrunning{L. C. Bassan, M. Fernandez, M. Insaurralde, P. Maurel y F. Sanchez}
 
 \institute{Universidad Tecnológica Nacional, Facultad Regional de Resistencia\\
 Ingeniería en Sistemas de Información\\
@@ -47,268 +46,131 @@ Ingeniería en Sistemas de Información\\
 \maketitle
 
 \begin{abstract}
-% TODO: redactar resumen.
+Se compara el rendimiento de un árbol de decisión C4.5 implementado desde cero con el modelo Random Forest de scikit-learn en problemas de clasificación. Ambos modelos se entrenan y evalúan sobre las mismas particiones estratificadas y con las mismas métricas. El análisis considera la tasa de acierto, la estabilidad de las predicciones, el tiempo de cómputo y la interpretabilidad. Los resultados se discuten en función del problema y del costo de cada modelo.
 \keywords{árbol de decisión \and C4.5 \and Random Forest}
 \end{abstract}
 
 \section{Introducción}
 
-Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión resuelven esta tarea mediante una secuencia de preguntas sobre esas características y producen un modelo que una persona puede leer. C4.5 es uno de los algoritmos más difundidos de la familia: elige cada pregunta con un criterio orientado a separar las clases, acepta atributos numéricos y categóricos, tolera datos faltantes e incorpora mecanismos para frenar el crecimiento del árbol y evitar que se ajuste en exceso al conjunto de entrenamiento \cite{liu2011}. Cada camino de la raíz a una hoja equivale a una regla del tipo ``si se cumple tal condición, se predice tal clase'', de modo que las decisiones del modelo pueden explicarse y revisarse sin herramientas adicionales.
+Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión producen un modelo legible, en el que cada camino de la raíz a una hoja equivale a una regla \cite{liu2011}. Random Forest combina muchos árboles para reducir la dependencia de una sola estructura, a cambio de más cómputo y de una decisión que ya no se sigue en un único camino \cite{breiman2001}. C4.5 elige cada pregunta con un criterio orientado a separar las clases y admite atributos numéricos y categóricos \cite{liu2011}. Ninguno de los dos enfoques domina al otro en general: la elección depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
 
-Un árbol aislado suele ser sensible a pequeños cambios en los datos: agregar o quitar unos pocos casos de entrenamiento puede dar una estructura distinta. Random Forest (bosque aleatorio) atenúa este problema entrenando muchos árboles y combinando sus respuestas. Cada árbol se construye con una muestra aleatoria de los casos y, en cada división, evalúa solo un subconjunto al azar de las características; la clase final se obtiene combinando las respuestas de los árboles. Así se diluye el peso de los casos atípicos y de los atributos dominantes, y por lo general la precisión puede aumentar y las predicciones se vuelven más estables. A cambio, el cómputo es más costoso y una decisión individual deja de poder seguirse en una única regla, lo que explica que se lo describa como un modelo de caja negra \cite{breiman2001}.
+Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos [DATASET PENDIENTE]. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
 
-Ninguno de los dos enfoques domina al otro en general. Si el problema es sencillo o hay que justificar cada decisión, un árbol puede bastar; si lo que importa es la precisión y no se exige explicar casos individuales, el bosque suele ser la opción más razonable. Ahora bien, la comparación solo es válida si ambos modelos se entrenan y prueban sobre las mismas particiones, se miden con las mismas métricas y ninguno accede a información del conjunto de prueba durante el entrenamiento. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo.
+Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos.
 
-% Reemplazar [DATASET PENDIENTE] cuando la cátedra informe el conjunto de datos.
-Este trabajo realiza esa comparación sobre el conjunto de datos [DATASET PENDIENTE]. Se implementa desde cero un árbol de decisión basado en C4.5 y se lo contrasta con el Random Forest de scikit-learn \cite{scikitRF}. Programar el árbol propio permite controlar y justificar cada decisión de construcción, mientras que el bosque de scikit-learn sirve de referencia de un método de ensamble de uso extendido. Los dos modelos se evalúan con las mismas particiones y métricas, y para cada uno se prueban varias configuraciones de parámetros con el fin de ver cómo responde su comportamiento.
-
-El objetivo es determinar en qué condiciones conviene cada modelo, atendiendo a la precisión, pero también a la estabilidad de las predicciones, al tiempo de cómputo y a qué tan interpretable resulta cada uno. El diseño experimental busca que las diferencias observadas puedan atribuirse a los algoritmos y no a las condiciones de la prueba. De fondo está la idea de que la mayor complejidad de un bosque no garantiza un beneficio: esta depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
-
-Las contribuciones son una implementación propia de C4.5, con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento del árbol \cite{liu2011}; un esquema de evaluación común para ambos modelos; y un análisis comparativo de los cuatro aspectos mencionados, que puede orientar la elección entre árbol y bosque en problemas similares.
-
-El resto del trabajo se organiza así: la sección 2 expone los fundamentos teóricos de C4.5 y Random Forest; la sección 3 describe brevemente los algoritmos desarrollados; la sección 4 describe la solución implementada y los problemas encontrados; la sección 5 reúne las simulaciones y sus resultados; y la sección 6 discute las conclusiones. Las referencias cierran el documento.
+El documento describe primero los fundamentos de ambos modelos, luego la implementación, después los experimentos y cierra con las conclusiones.
 
 \section{Fundamentos teóricos}
 
-La introducción presentó los dos modelos y el problema de comparación que motiva el trabajo. Esta sección define los conceptos y las fórmulas que usan las secciones siguientes. Se parte del criterio de construcción de un árbol de decisión, con el manejo de atributos continuos, valores faltantes y poda. Luego se expone la lógica del ensamble Random Forest y las nociones de margen, fuerza y cota que lo acompañan.
-
 \subsection{Árboles de decisión y C4.5}
 
-Un árbol de decisión clasifica un caso haciéndole preguntas sucesivas sobre sus atributos. Cada pregunta ocupa un nodo interno y reparte los casos en grupos; cada hoja guarda la clase que se asigna a los casos que llegan hasta ella. El camino de la raíz a una hoja forma una regla, de modo que el árbol completo equivale a un conjunto de reglas. Para decidir qué preguntar hace falta medir cuán mezcladas están las clases dentro de un nodo, magnitud que se llama impureza: un nodo puro contiene una sola clase y uno impuro reparte sus casos entre varias. C4.5 construye el árbol de forma recursiva y elige cada pregunta según esa medida.
-
-La entropía mide la impureza de un conjunto de casos a partir de la distribución de sus clases. Sea $D$ el conjunto de casos de un nodo, $C$ el conjunto de clases y $p_c$ la proporción de casos de la clase $c$, medida por masa cuando los pesos no son unitarios. La entropía, expresada en bits, está dada por la ecuación~\eqref{eq:entropia} \cite{liu2011}.
+C4.5 construye un árbol de decisión de forma recursiva \cite{liu2011}. En cada nodo elige la pregunta sobre un atributo que mejor separa las clases y repite el procedimiento en los subconjuntos resultantes. La entropía mide la impureza de un nodo a partir de la distribución de sus clases. Si $D$ es el conjunto de casos, $C$ el conjunto de clases y $p_c$ la proporción de casos de la clase $c$, medida por masa cuando los pesos no son unitarios, la entropía se define en la ecuación~\eqref{eq:entropia}:
 \begin{equation}
-H(D) = -\sum_{c \in C} p_c \log_2 p_c
+H(D) = -\sum_{c \in C} p_c \log_2 p_c.
 \label{eq:entropia}
 \end{equation}
-Se adopta la convención $0\log_2 0=0$ para que las clases ausentes no produzcan indeterminaciones. La entropía vale cero cuando todos los casos son de una misma clase y alcanza su máximo cuando las clases tienen proporciones iguales.
+La entropía vale cero cuando todos los casos pertenecen a una misma clase y alcanza su máximo cuando las clases están equilibradas.
 
-Una pregunta sobre un atributo $A$ divide $D$ en $v$ subconjuntos $D_j$. Cada caso tiene un peso, que inicialmente es uno, y la masa de un conjunto es la suma de esos pesos: $W_j$ es la masa de $D_j$ y $W$ la de $D$. La impureza que queda tras la división es el promedio de sus entropías, ponderado por la masa de cada subconjunto. Sin valores faltantes, la entropía de la partición resulta de la ecuación~\eqref{eq:entropia-particion}.
+Una pregunta sobre un atributo $A$ divide $D$ en $v$ subconjuntos $D_j$, con masas $W_j$, y $W$ es la masa de $D$. La ganancia de información es la reducción de entropía que produce esa división, ecuación~\eqref{eq:ganancia}, donde la suma ponderada representa la impureza que queda en las ramas. Cuanto mayor es la ganancia, más puras quedan las ramas, y una ganancia nula indica que la partición no reduce la impureza.
 \begin{equation}
-H_A(D) = \sum_{j=1}^{v} \frac{W_j}{W} H(D_j)
-\label{eq:entropia-particion}
-\end{equation}
-La ganancia de información es la reducción de entropía que produce la división, según la ecuación~\eqref{eq:ganancia}.
-\begin{equation}
-\Gain(D,A) = H(D) - H_A(D)
+\Gain(D,A) = H(D) - \sum_{j=1}^{v} \frac{W_j}{W} H(D_j).
 \label{eq:ganancia}
 \end{equation}
-Cuanto mayor es la ganancia, más puras quedan las ramas, y una ganancia nula indica que la partición no reduce la impureza. Se mide en bits y no es negativa, porque la entropía de la partición es menor o igual que la del conjunto original.
 
-La ganancia favorece a los atributos con muchos valores distintos: partir el conjunto en grupos muy pequeños reduce la impureza casi por construcción, aunque las reglas resultantes puedan generalizar mal \cite{liu2011}. C4.5 atenúa este efecto dividiendo la ganancia por la entropía de la propia partición, llamada información de la partición y dada por la ecuación~\eqref{eq:split-info}.
-\begin{equation}
-\SplitInfo(D,A) = -\sum_{j=1}^{v} \frac{W_j}{W}\log_2\frac{W_j}{W}
-\label{eq:split-info}
-\end{equation}
-El cociente entre ambas magnitudes es la tasa de ganancia, ecuación~\eqref{eq:gain-ratio} \cite{liu2011}.
-\begin{equation}
-\GainRatio(D,A) = \frac{\Gain(D,A)}{\SplitInfo(D,A)}
+La ganancia favorece a los atributos con muchos valores distintos, porque fragmentar el conjunto reduce la impureza casi por construcción. C4.5 atenúa ese efecto con la información de la partición, ecuación~\eqref{eq:split-info}, que mide cuánto fragmenta el atributo. La tasa de ganancia, ecuación~\eqref{eq:gain-ratio}, es el cociente entre ambas magnitudes; un atributo que fragmenta demasiado queda penalizado. Si la partición no produce al menos dos ramas conocidas de masa positiva, el atributo no se considera candidato.
+\begin{align}
+\SplitInfo(D,A) &= -\sum_{j=1}^{v} \frac{W_j}{W}\log_2\frac{W_j}{W},
+\label{eq:split-info}\\
+\GainRatio(D,A) &= \frac{\Gain(D,A)}{\SplitInfo(D,A)}.
 \label{eq:gain-ratio}
-\end{equation}
-Un atributo que fragmenta mucho el conjunto aumenta el denominador y queda penalizado frente a uno que lo fragmenta menos. Si la partición no produce al menos dos ramas conocidas de masa positiva, el atributo no se considera candidato; sin valores faltantes, eso equivale a un denominador nulo.
+\end{align}
 
-Los atributos numéricos no tienen un conjunto finito de categorías y requieren otro tratamiento. En cada nodo, C4.5 ordena los valores observados del atributo, operación de costo $O(|D|\log |D|)$, y examina únicamente los cortes entre valores consecutivos. Si hay $r$ valores distintos, existen $r-1$ particiones binarias posibles, cada una definida por un umbral $t$ que separa los casos con $A \le t$ de los casos con $A > t$ \cite{liu2011}. Sin valores faltantes, para cada umbral se calcula la ganancia de la ecuación~\eqref{eq:ganancia-umbral} y se conserva el corte con la mayor tasa de ganancia.
-\begin{equation}
-\begin{split}
-\Gain(D,A,t) = H(D) - \frac{W_{\le t}}{W}H(D_{\le t})
-- \frac{W_{>t}}{W}H(D_{>t})
-\end{split}
-\label{eq:ganancia-umbral}
-\end{equation}
-El umbral coincide con un valor observado y se elige en cada nodo, de manera que no hay discretización global ni una grilla fijada de antemano. Un atributo numérico puede reutilizarse más abajo, ya que los subconjuntos resultantes pueden admitir nuevos cortes, mientras que un atributo categórico se descarta una vez usado \cite{liu2011}.
+Los atributos numéricos requieren un tratamiento distinto. En cada nodo se ordenan los valores observados, operación de costo $O(|D|\log |D|)$, y se examinan los $r-1$ cortes entre valores consecutivos; cada corte separa los casos con $A\le t$ de los que tienen $A>t$. Se conserva el corte con la mayor tasa de ganancia. El umbral es un valor observado y se elige en cada nodo, sin discretización global. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse \cite{liu2011}.
 
-Los valores faltantes obligan a distinguir entre la masa total $W$ de un nodo, la masa $W_K$ de los casos que tienen valor para el atributo evaluado y la masa $W_U$ de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, como indica la ecuación~\eqref{eq:ganancia-ajustada} \cite{liu2011}.
-\begin{equation}
-\Gain^*(D,A) = \frac{W_K}{W}\left[H(D_K) - \sum_j \frac{W_j}{W_K}H(D_j)\right]
-\label{eq:ganancia-ajustada}
-\end{equation}
-En ese cálculo, las proporciones de clase se obtienen con las masas y no con los conteos. En la información de la partición, los casos faltantes cuentan como una rama más dentro del cálculo, aunque no den lugar a una rama del árbol (ecuación~\eqref{eq:split-info-ajustada}).
-\begin{equation}
-\begin{split}
-\SplitInfo^*(D,A) = {}&-\sum_j \frac{W_j}{W}\log_2\frac{W_j}{W}\\
-&-\frac{W_U}{W}\log_2\frac{W_U}{W}
-\end{split}
-\label{eq:split-info-ajustada}
-\end{equation}
-En el entrenamiento, un caso con un valor faltante se envía a todas las ramas y su peso se reparte según las proporciones $q_j$ de la ecuación~\eqref{eq:proporcion-rama}.
-\begin{equation}
-q_j = \frac{W_j}{W_K}
+Con valores faltantes, sea $W_K$ la masa de los casos con valor conocido para el atributo y $W_U$ la de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, ecuación~\eqref{eq:ganancia-ajustada}. La información de la partición agrega la masa faltante $W_U$ como una rama de cálculo, aunque no origine una rama del árbol. La tasa de ganancia ajustada es el cociente entre la ganancia ajustada y esa información de la partición. En el entrenamiento, un caso faltante se envía a todas las ramas y su peso se reparte según $q_j=W_j/W_K$, ecuación~\eqref{eq:proporcion-rama}; en la predicción, las probabilidades de las ramas se combinan con esas mismas proporciones \cite{liu2011}. Como el conjunto usado está completo, este mecanismo no interviene en la comparación; la implementación de Random Forest usada no admite faltantes.
+\begin{align}
+\Gain^*(D,A) &= \frac{W_K}{W}\left[H(D_K) - \sum_j \frac{W_j}{W_K}H(D_j)\right],
+\label{eq:ganancia-ajustada}\\
+q_j &= \frac{W_j}{W_K}.
 \label{eq:proporcion-rama}
-\end{equation}
-En la predicción, cuando falta el atributo que decide el nodo, las probabilidades de las ramas para un caso $x$ se combinan con esas mismas proporciones, según la ecuación~\eqref{eq:mezcla-prediccion}.
-\begin{equation}
-P(c\mid x) = \sum_j q_j P(c\mid x, \text{rama } j)
-\label{eq:mezcla-prediccion}
-\end{equation}
-La tasa de ganancia ajustada usa esos dos valores ajustados; con este reparto la masa total se conserva y no se imputa ningún valor.
+\end{align}
 
-Un árbol que crece sin restricciones puede terminar ajustándose a rasgos particulares del conjunto de entrenamiento y perder capacidad sobre casos nuevos, fenómeno conocido como sobreajuste. Cuanto más profundo es el árbol, menos casos respaldan cada hoja, y la tasa de acierto sobre el entrenamiento puede seguir subiendo sin que lo haga la tasa de acierto sobre datos nuevos. La prepoda detiene el crecimiento durante la construcción; la pospoda elimina subárboles una vez construido el árbol completo. La prepoda evita construir subárboles que luego se descartarían, mientras que la pospoda requiere construir el árbol completo antes de evaluarlo. El C4.5 original emplea pospoda pesimista, basada en una estimación del error, y la pospoda suele preferirse porque evalúa cada subárbol ya desarrollado \cite{liu2011}.
-
-El C4.5 original también aplica poda de reglas, que acorta las condiciones de cada regla y puede hacer que las reglas se superpongan o dejen casos sin cubrir \cite{liu2011}. La prepoda tiene un inconveniente conocido como efecto de horizonte: puede frenar el crecimiento antes de tiempo, porque en ese momento no se ve lo que aportaría el subárbol completo. Hallar el árbol óptimo, pequeño y preciso a la vez, es un problema NP-completo \cite{liu2011}. No se conoce un algoritmo eficiente que lo resuelva en todos los casos, así que C4.5 elige en cada nodo la división de mayor tasa de ganancia y no vuelve a evaluar esa decisión durante la construcción; la pospoda actúa sobre los subárboles. Este trabajo adopta solamente prepoda y no implementa pospoda ni poda de reglas; las consecuencias de esa decisión se discuten en la sección 4. La subsección siguiente presenta Random Forest, que combina árboles de decisión con otro criterio de división.
+Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del conjunto de entrenamiento y perder capacidad sobre casos nuevos. La prepoda detiene el crecimiento durante la construcción; la pospoda elimina subárboles después de construir el árbol completo. El C4.5 original emplea pospoda pesimista, mientras que este trabajo aplica solo prepoda y no implementa poda de reglas \cite{liu2011}. La construcción es codiciosa: cada división se elige con la información disponible en el nodo y no se revisa después, de modo que la prepoda puede detener el crecimiento antes de lo conveniente.
 
 \subsection{Random Forest}
 
-Random Forest es un método de ensamble que combina muchos árboles de decisión para reducir la dependencia de una sola estructura. Un árbol aislado puede cambiar de forma ante variaciones pequeñas en el conjunto de entrenamiento, porque cada división se elige con los casos disponibles en ese nodo \cite{liu2011}. El ensamble reemplaza esa única estructura por un conjunto de árboles construidos con perturbaciones aleatorias. Cada árbol se representa como $h(x,\Theta_k)$, donde $\Theta_k$ es un vector aleatorio que determina la muestra y los atributos disponibles en su construcción \cite{breiman2001}. Los vectores $\Theta_k$ se generan de forma independiente y con la misma distribución.
+Random Forest combina $B$ árboles de decisión construidos con perturbaciones aleatorias \cite{breiman2001}. Cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, obtenida con reemplazo, y en cada división evalúa solo un subconjunto aleatorio de los atributos disponibles. Los árboles crecen sin poda y la predicción combina sus respuestas por voto mayoritario o por promedio de probabilidades. Esa doble fuente de aleatoriedad reduce la dependencia de una sola estructura y la correlación entre los árboles.
 
-La aleatoriedad del ensamble proviene de dos fuentes. La primera es el muestreo con reemplazo: cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, de modo que algunos casos aparecen varias veces y otros quedan fuera \cite{breiman2001}. La segunda es la selección de atributos: en cada división, el árbol evalúa solo un subconjunto aleatorio de los atributos disponibles, y no todos \cite{breiman2001}. Cada rama se expande hasta que su hoja es pura o no se encuentra una división válida entre los atributos considerados; no se poda \cite{breiman2001}. La profundidad máxima no se limita y la cantidad de atributos por división se fija como parámetro.
-
-Para clasificar un caso nuevo, cada árbol emite un voto por una clase y el bosque asigna la clase más votada. Si $B$ es la cantidad de árboles y $h_k(x)$ la clase que predice el árbol $k$ para el caso $x$, la predicción del ensamble se define en la ecuación~\eqref{eq:voto-mayoritario} \cite{breiman2001}.
-\begin{equation}
-\hat{y}(x) = \operatorname*{arg\,max}_{c} \sum_{k=1}^{B} \mathbf{1}[h_k(x)=c]
-\label{eq:voto-mayoritario}
-\end{equation}
-El voto es uniforme: todos los árboles pesan lo mismo, con independencia de su profundidad o de su desempeño individual. En scikit-learn, los empates se resuelven con el orden de las clases \cite{scikitRF}.
-
-Para analizar el comportamiento del ensamble, Breiman define el margen de un caso como la diferencia entre la probabilidad de la clase correcta y la mayor probabilidad de una clase incorrecta, según la ecuación~\eqref{eq:margen} \cite{breiman2001}.
-\begin{equation}
-mr(x,y) = P_\Theta(h(x,\Theta)=y) - \max_{j\ne y} P_\Theta(h(x,\Theta)=j)
-\label{eq:margen}
-\end{equation}
-En la ecuación, $P_\Theta$ indica la probabilidad sobre los vectores aleatorios que generan los árboles. Un margen positivo indica que, en promedio, los árboles votan por la clase correcta con mayor frecuencia que por cualquier otra; un margen negativo indica lo contrario. La fuerza del ensamble es el valor esperado $E_{X,Y}$ del margen sobre la distribución de los casos y las clases, ecuación~\eqref{eq:strength}.
-\begin{equation}
-s = E_{X,Y}[mr(X,Y)]
-\label{eq:strength}
-\end{equation}
-Cuanto mayor es la fuerza, más separación media existe entre la clase correcta y las alternativas, y la correlación media $\bar{\rho}$ mide cuánto se parecen los márgenes de dos árboles cualesquiera. La cota de la ecuación~\eqref{eq:cota}, para $s>0$, relaciona el error de generalización $PE^*$, es decir, la probabilidad de que el margen sea negativo, con esas dos cantidades: un error menor se asocia con árboles fuertes y poco correlacionados \cite{breiman2001}.
-\begin{equation}
-PE^* \le \frac{\bar{\rho}(1-s^2)}{s^2}
-\label{eq:cota}
-\end{equation}
-La cota explica de qué depende el error, pero no se usa para calcularlo; su utilidad es orientar el diseño del ensamble.
-
-El muestreo con reemplazo deja fuera de cada árbol, en promedio, cerca de un tercio de los casos. Se los denomina casos fuera de la bolsa y no participan en la construcción de ese árbol. Si se predice cada caso solo con los árboles que no lo vieron, se obtiene una estimación del error de generalización sin separar un conjunto de prueba adicional \cite{breiman2001}. En este trabajo se usa como referencia y no como sustituto de la partición de prueba independiente, que se reserva para comparar modelos.
-
-Como configuración base, el Random Forest de scikit-learn usa cien árboles y crecimiento sin límite de profundidad \cite{scikitRF}. En cada división evalúa la raíz cuadrada del número de atributos y usa la impureza de Gini; cada árbol se entrena con muestreo con reemplazo. La ecuación~\eqref{eq:voto-mayoritario} describe el voto duro; la biblioteca, en cambio, promedia las probabilidades de los árboles y devuelve la clase con mayor probabilidad media \cite{scikitRF}. Ambas reglas coinciden cuando cada árbol asigna probabilidad uno a su clase. La semilla y el número de hilos se fijan para que la ejecución sea reproducible. La descripción del algoritmo se presenta en la sección 3 y la de la implementación en la sección 4.
+Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}. La fuerza resume la separación media entre la clase correcta y las alternativas, y la correlación mide cuánto se parecen las respuestas de dos árboles. El análisis de este trabajo es empírico y no usa esa caracterización para calcular el error. En este trabajo se usa la implementación de scikit-learn; su configuración se detalla en la sección 5.
 
 \section{Breve descripción de los algoritmos desarrollados}
 
-Las secciones anteriores definieron los criterios y las fórmulas de ambos modelos. Esta sección describe cómo se aplican esos criterios en la construcción y la predicción. Primero se presenta el procedimiento de C4.5, con su pseudocódigo y las decisiones que lo completan. Después se describe el procedimiento de Random Forest y se cierra con una transición a la solución implementada.
-
 \subsection{C4.5}
 
-El árbol de C4.5 se construye de forma recursiva, dividiendo el conjunto de casos de cada nodo en subconjuntos más pequeños. La entrada del procedimiento es un conjunto de casos con sus clases, los atributos disponibles, los pesos que indican cuánto aporta cada caso, la profundidad del nodo y los cuatro controles de crecimiento. La salida es un nodo que puede ser una hoja, si se cumple una condición de parada, o un nodo de decisión con un atributo, un umbral o un conjunto de ramas. En cada llamada se calculan los conteos ponderados por clase y se elige la clase mayoritaria, que se usará si el nodo termina como hoja. Luego se evalúan las divisiones posibles y se continúa por cada rama con el subconjunto correspondiente. El procedimiento se repite hasta que todas las ramas alcanzan una hoja \cite{liu2011}. El algoritmo~\ref{alg:c45} resume esa construcción.
+El Algoritmo~\ref{alg:c45} resume la construcción del árbol. El procedimiento recibe el conjunto de casos, el conjunto de atributos disponibles $\mathcal{A}$, la profundidad $d$, los cuatro controles de crecimiento y devuelve un nodo. La masa de un nodo es la suma de los pesos de sus casos, de modo que los casos repartidos por valores faltantes no cuentan como filas completas. Las paradas estructurales se evalúan antes de elegir la división; la comparación con el umbral de ganancia y con la tasa mínima se aplica después, y es estricta: si el valor es menor, el crecimiento se detiene; la igualdad permite dividir.
 
-El pseudocódigo muestra el orden de las decisiones, desde el cálculo de la clase mayoritaria hasta la creación recursiva de los hijos. El cuerpo se organiza en tres bloques: preparación del nodo, selección del atributo y expansión recursiva. Los pasos se numeran para ordenar la exposición y reflejan las decisiones adoptadas en este trabajo. El procedimiento usa conteos ponderados en lugar de conteos simples, porque un caso con valores faltantes puede repartirse entre varias ramas con peso fraccionario.
-
-\begin{algorithm}[!t]
+\begin{algorithm}[!ht]
 \caption{Construcción recursiva de un árbol C4.5}
 \label{alg:c45}
 \begin{algorithmic}[1]
-\STATE Calcular la masa por clase, elegir la clase mayoritaria e inicializar el nodo y el mejor candidato.
-\IF{hay una sola clase, $A$ está vacío, $d$ alcanzó el máximo o la masa es menor que el mínimo}
-    \RETURN el nodo.
+\STATE Calcular la masa por clase y elegir la clase mayoritaria.
+\IF{clase única, $\mathcal{A}$ vacío, profundidad máxima o masa mínima}
+    \RETURN hoja con la clase mayoritaria.
 \ENDIF
-\FOR{atributo $a \in A$}
-    \STATE Evaluar los cortes de $a$: valores observados salvo el máximo, o al menos dos ramas categóricas con masa positiva.
-    \STATE Calcular la tasa de ganancia ajustada por faltantes, conservar la mayor y desempatar por orden de atributo y menor umbral.
+\FOR{atributo $a \in \mathcal{A}$}
+    \STATE Evaluar sus divisiones y conservar la mayor tasa de ganancia ajustada.
 \ENDFOR
-\IF{no hay candidato o la ganancia o la tasa no alcanzan sus mínimos}
-    \RETURN el nodo.
+\IF{no hay candidato o no se alcanzan los mínimos}
+    \RETURN hoja con la clase mayoritaria.
 \ENDIF
-\STATE Convertirlo en nodo de decisión, registrar el atributo, el umbral o las ramas y las proporciones, y eliminar el atributo categórico de $A$ o conservar el numérico.
+\STATE Crear el nodo con el atributo, el umbral o las ramas, y las proporciones.
 \FOR{rama}
-    \STATE Formar el subconjunto conocido, repartir los faltantes con peso proporcional y construir el hijo con $d+1$.
+    \STATE Repartir los faltantes y construir el hijo con $d+1$.
 \ENDFOR
 \RETURN el nodo.
 \end{algorithmic}
 \end{algorithm}
 
-Las paradas se evalúan antes de elegir la división: clase pura, agotamiento de atributos, profundidad máxima y masa mínima. La masa mínima se compara con la suma de pesos y no con la cantidad de filas, de modo que las copias fraccionarias no inflan la evidencia del nodo. Para cada atributo se evalúan todas las particiones candidatas y se conserva la de mayor tasa de ganancia ajustada. La comparación con el umbral de ganancia ajustada y con la tasa mínima es estricta: si el valor es menor, se detiene; la igualdad permite dividir. Los empates se resuelven por el orden de los atributos y, entre cortes numéricos del mismo atributo, por el menor umbral.
-
-La predicción recorre el árbol desde la raíz hasta una hoja. Si el atributo de decisión tiene un valor conocido, el caso sigue la rama correspondiente: para un atributo numérico se compara con el umbral y para uno categórico se busca la categoría. Si el valor falta, el caso no se asigna a una sola rama: se combinan las distribuciones de todas las ramas con las proporciones aprendidas, como indica la ecuación~\eqref{eq:mezcla-prediccion}. Si aparece una categoría que no se vio en ese nodo, se usan las frecuencias locales del nodo alcanzado. La clase final es la de mayor probabilidad, y los empates se resuelven con la primera clase observada en el entrenamiento.
-
-El costo de construcción depende de la cantidad de atributos y de casos de cada nodo. Para un atributo numérico se ordenan sus valores observados, operación de costo $O(|D|\log |D|)$, y se evalúan $r-1$ cortes, donde $r$ es la cantidad de valores distintos. Esa evaluación se repite en cada nodo y para cada atributo, de modo que el entrenamiento puede ser más costoso que el de un árbol que solo considera atributos categóricos. El crecimiento es codicioso: en cada nodo se elige la mejor división disponible y no se vuelve a evaluar esa decisión. El árbol resultante puede ser profundo y ajustarse en exceso al entrenamiento \cite{liu2011}, y este trabajo no implementa pospoda ni poda de reglas para corregirlo. La prepoda descrita puede detener el crecimiento antes de lo conveniente.
+Los empates se resuelven por el orden de los atributos y, entre cortes numéricos del mismo atributo, por el menor umbral. Un atributo categórico se elimina del conjunto disponible después de usarse; uno numérico se conserva, porque los subconjuntos resultantes admiten nuevos cortes. En la predicción, un valor conocido sigue una sola rama; un valor faltante combina las distribuciones de todas las ramas con las proporciones aprendidas, y una categoría no vista usa las frecuencias locales del nodo alcanzado. La clase final es la de mayor probabilidad y los empates se resuelven con la primera clase observada en el entrenamiento.
 
 \subsection{Random Forest}
 
-El procedimiento de Random Forest construye $B$ árboles, uno por cada muestra obtenida con reemplazo del conjunto de entrenamiento. Cada árbol se entrena con un subconjunto aleatorio de atributos en cada división y crece sin poda, como se describió en la sección 2.2. La cantidad de árboles y la cantidad de atributos por división son parámetros del método. La predicción combina los votos de los árboles o, en la implementación de scikit-learn, el promedio de sus probabilidades \cite{scikitRF}.
-
-La diferencia con un árbol único está en la fuente de variabilidad. El bosque introduce aleatoriedad en la muestra y en los atributos de cada división para que los árboles no sean idénticos. Esa diversidad reduce la correlación entre los árboles y permite que el voto o el promedio combine respuestas distintas. La combinación no garantiza por sí sola un mejor desempeño: el resultado depende de la fuerza de los árboles y de su correlación, como indica la cota de la ecuación~\eqref{eq:cota} \cite{breiman2001}. Por eso la comparación con el árbol único debe hacerse con las mismas particiones y métricas, y no a partir de una expectativa general.
-
-El costo de entrenamiento del bosque suele ser mayor que el de un árbol único, porque se construyen $B$ árboles y cada uno recorre sus propios candidatos de división. La predicción también requiere recorrer todos los árboles y combinar sus respuestas. A cambio, la decisión deja de poder seguirse en un solo camino de la raíz a una hoja, porque el resultado depende del conjunto de árboles. La solución implementada organiza ambos modelos y resuelve los problemas técnicos que aparecen al integrarlos. La sección siguiente describe esa organización.
+La implementación de Random Forest usa scikit-learn y combina las probabilidades de los árboles. Su configuración se detalla en la sección 5.
 
 \section{Descripción de la solución implementada}
 
-La sección anterior describió los procedimientos de ambos modelos. Esta sección presenta cómo se organiza el software que los implementa y qué problemas técnicos se resolvieron. Primero se describe la arquitectura general y el contrato común de predicción. Después se explican las decisiones de diseño y los problemas encontrados.
+\subsection{Arquitectura y protocolo de evaluación}
 
-\subsection{Arquitectura de software}
+La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La preparación carga el conjunto de datos, deduce el tipo de cada atributo y construye una partición estratificada con el 80\% de los casos para entrenamiento y el 20\% para prueba, con una semilla fija de 42. Ambos modelos usan las mismas particiones y las mismas métricas, y ninguno accede al conjunto de prueba durante el entrenamiento. No se imputan valores faltantes ni se eliminan filas: C4.5 admite faltantes y categorías nativas, mientras que Random Forest se entrena solo con datos completos y transforma las categorías en columnas binarias dentro de su flujo.
 
-La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La primera capa carga los conjuntos originales, verifica su integridad y construye las particiones. La segunda entrena el árbol de decisión C4.5 y el Random Forest. La tercera compara las predicciones con las clases reales y calcula las métricas. La Figura~\ref{fig:arquitectura} resume el flujo entre esas capas y las dos ramas de modelado.
+La codificación de Random Forest se ajusta solo con el conjunto de entrenamiento y una categoría no vista se representa con ceros; C4.5 conserva una rama por categoría. Esa diferencia de preprocesamiento es una posible fuente de sesgo en la comparación y se retoma al interpretar los resultados. Ambos modelos exponen el mismo contrato de predicción: reciben una tabla de datos, devuelven una columna con la clase predicha y conservan el índice y el orden de las filas sin modificar la entrada. La validación exige las mismas columnas y tipos del entrenamiento, y los desempates del árbol son deterministas. Las probabilidades del árbol son frecuencias ponderadas y no están calibradas.
 
-\begin{figure}[t]
+\subsection{Decisiones de diseño y problemas encontrados}
+
+Los principales problemas fueron el tratamiento de atributos continuos, los valores faltantes, el control del crecimiento y la comparabilidad del preprocesamiento. La Tabla~\ref{tab:decisiones} resume las decisiones adoptadas. Las pruebas de cortes, conservación de masa y repetición de particiones respaldan las decisiones de mayor riesgo. El crecimiento se controla con cuatro parámetros independientes: el umbral de ganancia, la profundidad máxima, la masa mínima y la tasa de ganancia mínima; no se implementa pospoda.
+
+\begin{table}[!ht]
 \centering
-\begin{tikzpicture}[
-  box/.style={draw, rectangle, rounded corners=2pt, align=center,
-              minimum width=2.6cm, minimum height=0.7cm, font=\small},
-  arrow/.style={-{Latex[length=2mm]}, thick}
-]
-\node[box] (datos) at (0,0) {Conjuntos de datos\\originales};
-\node[box] (carga) at (0,-0.9) {Carga y validación};
-\node[box] (particion) at (0,-1.8) {Partición estratificada};
-\node[box] (entrenamiento) at (-3.1,-2.7) {Entrenamiento};
-\node[box] (prueba) at (3.1,-2.7) {Prueba};
-\node[box] (c45) at (-4.5,-3.6) {Árbol C4.5};
-\node[box] (rf) at (-1.7,-3.6) {Random Forest};
-\node[box] (prediccion) at (-3.1,-4.5) {Predicción común};
-\node[box] (evaluacion) at (0,-5.4) {Evaluación};
-
-\draw[arrow] (datos) -- (carga);
-\draw[arrow] (carga) -- (particion);
-\draw[arrow] (particion) -- (entrenamiento);
-\draw[arrow] (particion) -- (prueba);
-\draw[arrow] (entrenamiento) -- (c45);
-\draw[arrow] (entrenamiento) -- (rf);
-\draw[arrow] (c45) -- (prediccion);
-\draw[arrow] (rf) -- (prediccion);
-\draw[arrow] (prediccion) -- (evaluacion);
-\draw[arrow] (prueba) |- (evaluacion);
-\draw[dashed] (entrenamiento) -- (prueba)
-    node[midway, below, font=\scriptsize] {mismas particiones};
-\end{tikzpicture}
-\caption{Organización de la solución implementada.}
-\label{fig:arquitectura}
-\end{figure}
-
-La preparación comienza con la verificación de integridad de los archivos que se leen desde disco, mediante un resumen criptográfico que detecta cambios en los bytes. Luego se decodifican las etiquetas numéricas de algunos conjuntos para que las clases tengan nombres legibles. La distinción entre atributos numéricos y categóricos se deduce del tipo de columna: los números se tratan como continuos, salvo los booleanos, y el texto y las categorías se tratan como discretos. La partición conserva la proporción de clases y reserva el veinte por ciento para prueba; usa una semilla fija de 42 para que sea reproducible. No se imputan valores faltantes ni se eliminan filas: la implementación de C4.5 los admite y el predictor de Random Forest los rechaza, como se explica más adelante.
-
-El árbol C4.5 se implementa desde cero con funciones de métricas, una estructura de nodo y una construcción recursiva. Esa implementación conserva los atributos categóricos y elige una rama por categoría, de modo que no necesita una codificación previa. El Random Forest se toma de scikit-learn y se envuelve en un flujo de procesamiento que transforma las categorías en columnas binarias y conserva las columnas numéricas sin escalar. La codificación se ajusta solo con el conjunto de entrenamiento y se aplica después a los casos nuevos; una categoría no vista se representa con ceros. Esa codificación no se aplica a C4.5 porque cambiaría la semántica de la división: una columna binaria por categoría no equivale a una rama por categoría.
-
-Ambos modelos exponen una operación de predicción con el mismo contrato: recibe una tabla de datos, devuelve una columna con la clase predicha y conserva el índice y el orden de las filas. El contrato no unifica el entrenamiento ni las clases internas: cada modelo conserva su propia representación y su propio orden de clases. Esa separación reduce la dependencia entre las capas y permite comparar ambos modelos sobre las mismas filas de prueba. La evaluación usa las mismas particiones y una semilla fija en la separación y en el Random Forest. Los desempates del árbol son deterministas: se resuelven por el orden de los atributos y por la primera clase observada. El Random Forest se ejecuta con un solo hilo para que el resultado no dependa de la planificación de procesos. Las pruebas del árbol cargan las celdas de definición de su cuaderno, de modo que las definiciones probadas son las que usan los experimentos. Esa organización deja separadas la preparación, la construcción y la evaluación, y permite describir las decisiones de diseño a continuación.
-
-\subsection{Decisiones de diseño}
-
-Ambos modelos usan particiones idénticas, generadas con la misma función y semilla, para que las diferencias no provengan de los datos. El preprocesamiento es específico: C4.5 conserva las categorías y el Random Forest las transforma en columnas binarias dentro de su flujo. Esa transformación se ajusta solo con el conjunto de entrenamiento y se aplica después a los casos nuevos. Una categoría no vista se representa con ceros.
-
-La operación de predicción tiene un contrato mínimo: recibe una tabla de datos, devuelve una columna con la clase predicha, conserva el índice y el orden de las filas y no modifica la entrada. La validación comprueba que las columnas y su orden coincidan con los del entrenamiento y que los tipos sean compatibles. Los tipos se deducen durante el entrenamiento: los números son continuos, salvo los booleanos, y el texto y las categorías son discretos. En el árbol, los cortes se eligen solo en valores observados y los empates se resuelven por el orden de los atributos y por la primera clase observada; ante un faltante mezcla las distribuciones de las ramas, y ante una categoría nueva usa las frecuencias locales. El bosque usa el orden de clases de scikit-learn y su predictor rechaza faltantes. Las probabilidades del árbol son frecuencias ponderadas, no calibradas. El contrato no unifica el entrenamiento ni las clases internas, y esa separación permite comparar ambos modelos sobre las mismas filas.
-
-\subsection{Problemas técnicos y decisiones}
-
-La implementación enfrentó tres dificultades principales: los atributos continuos, los valores faltantes y el control del crecimiento. A ellas se sumó la integración reproducible de las tres capas. Las decisiones se tomaron para que el comportamiento fuera explícito y verificable. La Tabla~\ref{tab:decisiones} resume cada problema, la decisión adoptada y su verificación.
-
-Los atributos continuos no admiten una discretización global sin perder información local, así que en cada nodo se ordenan los valores observados y se evalúan cortes binarios en esos valores. Esa decisión conserva la resolución de los datos, a costa de ordenar en cada nodo; el atributo numérico puede reutilizarse en niveles inferiores. Los valores faltantes no se imputan: se reparten con peso fraccionario y la ganancia se ajusta por la masa conocida. La información de la partición incluye el grupo faltante como una rama de cálculo, y la predicción mezcla las distribuciones de las ramas alcanzables. Esa estrategia conserva la masa total y evita inventar un valor, aunque multiplica las filas y el costo. Un atributo constante o totalmente vacío no genera candidatos, y una categoría nueva se trata como distribución local, no como valor faltante. En este trabajo, Random Forest se entrena solo con los conjuntos completos que carga la preparación y su predictor rechaza valores faltantes.
-
-El crecimiento se controla con cuatro parámetros independientes: el umbral de ganancia en bits, la profundidad máxima, la masa mínima y la tasa de ganancia mínima. El umbral, la tasa y la masa usan $<$: la igualdad permite dividir; la profundidad se detiene al alcanzar su máximo. Ambas condiciones de ganancia deben cumplirse. No se implementa pospoda ni poda de reglas; la prepoda puede detener el crecimiento antes de lo conveniente. La integración se apoya en una sola implementación, pruebas que cargan las celdas del cuaderno del árbol, verificación de integridad, conservación de los saltos de línea en las copias originales y resolución de rutas en distintos entornos.
-
-\begin{table}[t]
-\centering
-\caption{Problemas técnicos, decisiones adoptadas y verificación.}
+\caption{Problemas técnicos y decisiones adoptadas.}
 \label{tab:decisiones}
 \footnotesize
-\begin{tabular}{@{}p{0.24\textwidth}p{0.38\textwidth}p{0.30\textwidth}@{}}
+\begin{tabular}{@{}p{0.28\textwidth}p{0.64\textwidth}@{}}
 \toprule
-Problema & Decisión & Verificación \\
+Problema & Decisión \\
 \midrule
-Atributos continuos & Cortes binarios por nodo; sin grilla global & Pruebas con cortes conocidos \\
-Valores faltantes & Pesos fraccionarios y mezcla de distribuciones & Cálculo manual y conservación de masa \\
-Crecimiento & Prepoda con cuatro controles; sin pospoda & Pruebas de profundidad, masa y tasa \\
-Reproducibilidad & Semilla fija y desempates deterministas & Repetición de particiones y predicciones \\
+Atributos continuos & Cortes binarios en valores observados; sin grilla global \\
+Valores faltantes & Reparto con peso proporcional y ganancia ajustada; la implementación de \mbox{Random Forest} no los admite \\
+Crecimiento & Prepoda con cuatro controles; sin pospoda \\
+Preprocesamiento & Categorías nativas en C4.5; codificación binaria en \mbox{Random Forest} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-La Tabla~\ref{tab:decisiones} muestra que cada dificultad se resolvió con una decisión verificable. Los atributos continuos se verifican con cortes conocidos; los faltantes, con cálculos manuales y conservación de masa; el crecimiento, con pruebas de profundidad, masa y tasa; y la reproducibilidad, con la repetición de particiones y predicciones. Esa correspondencia reduce el riesgo de que una elección quede sin respaldo. Con esas decisiones explícitas, la comparación de la sección 5 puede atribuirse a los modelos y no a diferencias de preparación.
-
 \section{Simulaciones y resultados}
+
+\subsection{Configuración experimental}
+
+El Random Forest de scikit-learn se configura con cien árboles, crecimiento sin límite de profundidad, la raíz cuadrada del número de atributos por división y la impureza de Gini \cite{scikitRF}. Cada árbol se entrena con muestreo con reemplazo y la predicción promedia las probabilidades. La semilla se fija y Random Forest se ejecuta con un solo hilo para que el tiempo de cómputo no dependa de la planificación de procesos.
 % TODO: incorporar resultados de experimentos reales.
 
 \section{Conclusiones}
