@@ -317,10 +317,45 @@ La ejecución muestra tamaños y clases de las particiones, ejemplos de respuest
 reales junto con predicciones, y accuracy de prueba para los tres datasets. También
 verifica el contrato de salida, la separación de train/test y la reproducibilidad.
 Estas métricas documentan una ejecución base. El notebook 01 ya usa las mismas
-particiones para el árbol propio; la comparación experimental con distintas
-parametrizaciones se desarrollará en el notebook 03.
+particiones para el árbol propio. El motor para ejecutar distintas
+parametrizaciones está en el notebook 03.
 
-Para ambos notebooks, una ejecución local correcta no acredita por sí sola la
+## Motor de benchmarking (HU-09)
+
+`02_random_forest.ipynb` permite crear un pipeline nuevo con `n_estimators`,
+`max_features`, `max_depth`, `criterion`, `bootstrap` y `random_state`; la
+ejecución base conserva sus valores anteriores. `03_experimentos.ipynb` carga
+las definiciones etiquetadas de los notebooks 01 y 02 y ejecuta grillas
+independientes para C4.5 y Random Forest, sin duplicar sus algoritmos.
+
+`ejecutar_benchmark(nombre_dataset, X_train, y_train, X_eval, y_eval, grillas,
+nombre_evaluacion="validacion", semilla=42, semilla_particion=None,
+protocolo_particion="particiones provistas")` recibe `X` e `y` como DataFrames
+con índices alineados; `y` tiene una columna `objetivo`. Las grillas usan las
+claves `C4.5` y `Random Forest`. C4.5 admite `threshold`, `max_depth`,
+`min_samples_split` y `min_gain_ratio`; RF admite los cinco hiperparámetros
+enumerados arriba. `threshold` es un mínimo de ganancia de información en bits
+y `min_gain_ratio` es un mínimo adimensional de Gain Ratio. La implementación
+actual de C4.5 ofrece prepoda mediante esos controles, sin pospoda.
+
+El resultado es un DataFrame con una fila por configuración y conjunto
+evaluado. Registra dataset, modelo, parámetros solicitados y efectivos,
+semilla, cantidad de casos, Accuracy, Precision, Recall y F1 macro/weighted,
+matriz de confusión con orden de clases explícito y tiempos de entrenamiento
+e inferencia en milisegundos. Los tiempos incluyen `fit` y `predict` con el
+preprocesamiento de RF, excluyen el cálculo de métricas, y pueden variar entre
+ejecuciones. La semilla y el protocolo de particionado se registran según los
+datos proporcionados por quien llama al motor. Las métricas indefinidas por
+división cero se fijan en 0.
+
+La comprobación del notebook crea una validación estratificada desde el
+entrenamiento de Iris: dos configuraciones por modelo producen ocho registros
+para entrenamiento y validación. La selección de parámetros debe realizarse
+con validación dentro de entrenamiento; test se reserva para evaluar una
+configuración elegida. Las baterías completas y las gráficas corresponden a
+HU-11, HU-12 y HU-13.
+
+Para los tres notebooks, una ejecución local correcta no acredita por sí sola la
 ejecución en Google Colab: esa comprobación debe hacerse también en la plataforma.
 
 ## Entorno local con uv
