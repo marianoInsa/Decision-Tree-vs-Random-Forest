@@ -7,6 +7,7 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{booktabs}
+\usepackage{graphicx}
 
 \DeclareMathOperator{\Gain}{Gain}
 \DeclareMathOperator{\SplitInfo}{SplitInfo}
@@ -46,8 +47,7 @@ Ingeniería en Sistemas de Información\\
 \maketitle
 
 \begin{abstract}
-% TODO: Redactar abstract al final.
-hola soy un abstract
+Este trabajo compara una implementación propia del árbol de decisión C4.5 con el modelo de ensamble Random Forest sobre el conjunto de datos Heart Disease, con 10 particiones estratificadas. Con los valores por defecto, Random Forest alcanzó una tasa de acierto de 0,811 y C4.5, de 0,718. Limitar el crecimiento del árbol elevó su tasa hasta 0,757. Random Forest se mostró poco sensible a sus parámetros, mientras que C4.5 ofreció un modelo legible a cambio de requerir ajuste.
 
 \keywords{Árbol de Decisión \and C4.5 \and Random Forest}
 \end{abstract}
@@ -87,7 +87,7 @@ La ganancia favorece a los atributos con muchos valores distintos, porque fragme
 \label{eq:gain-ratio}
 \end{align}
 
-Los atributos numéricos requieren un tratamiento distinto. En cada nodo se ordenan los valores observados, operación de costo $O(|D|\log |D|)$, y se examinan los $r-1$ cortes entre valores consecutivos; cada corte separa los casos con $A\le t$ de los que tienen $A>t$. Se conserva el corte con la mayor tasa de ganancia. El umbral es un valor observado y se elige en cada nodo, sin discretización global. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse \cite{liu2011}.
+Los atributos numéricos requieren un tratamiento distinto. En cada nodo se ordenan los valores observados, operación de costo $O(|D|\log |D|)$, y se examinan los $r-1$ cortes entre valores consecutivos; cada corte separa los casos con $A\le t$ de los que tienen $A>t$. Se conserva el corte con la mayor ganancia, porque con la tasa de ganancia prevalecerían los cortes que aíslan muy pocos casos \cite{quinlan1993}. El umbral es un valor observado y se elige en cada nodo, sin discretización global. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse \cite{liu2011}.
 
 Con valores faltantes, sea $W_K$ la masa de los casos con valor conocido para el atributo y $W_U$ la de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, ecuación~\eqref{eq:ganancia-ajustada}. La información de la partición agrega la masa faltante $W_U$ como una rama de cálculo, aunque no origine una rama del árbol. La tasa de ganancia ajustada es el cociente entre la ganancia ajustada y esa información de la partición. En el entrenamiento, un caso faltante se envía a todas las ramas y su peso se reparte según $q_j=W_j/W_K$, ecuación~\eqref{eq:proporcion-rama}; en la predicción, las probabilidades de las ramas se combinan con esas mismas proporciones \cite{liu2011}.
 \begin{align}
@@ -105,7 +105,7 @@ Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del 
 Random Forest combina $B$ árboles de decisión construidos con perturbaciones aleatorias \cite{breiman2001}. Cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, obtenida con reemplazo, y en cada división evalúa solo un subconjunto aleatorio de los atributos disponibles. Los árboles crecen sin poda y la predicción combina sus respuestas por voto mayoritario o por promedio de probabilidades. Esa doble fuente de aleatoriedad reduce la dependencia de una sola estructura y la correlación entre los árboles.
 
 Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}. La fuerza resume la separación media entre la clase correcta y las alternativas, y la correlación mide cuánto se parecen las respuestas de dos árboles. El análisis de este trabajo es empírico y no usa esa caracterización para calcular el error. En este trabajo se usa la implementación de scikit-learn (...); su configuración se detalla en la sección 5.
-% TODO: agregar qué método específico de scikit-learn se utiliza
+Este trabajo usa el clasificador de bosques aleatorios de scikit-learn \cite{scikitRF}.
 
 \section{Breve descripción de los algoritmos desarrollados}
 
@@ -122,8 +122,10 @@ El Algoritmo~\ref{alg:c45} resume la construcción del árbol. El procedimiento 
     \RETURN hoja con la clase mayoritaria.
 \ENDIF
 \FOR{atributo $a \in \mathcal{A}$}
-    \STATE Evaluar sus divisiones y conservar la mayor tasa de ganancia ajustada.
+    \STATE Evaluar sus divisiones y conservar la mejor.
 \ENDFOR
+\STATE Retener los candidatos con ganancia al menos promedio.
+\STATE Elegir entre ellos el de mayor tasa de ganancia ajustada.
 \IF{no hay candidato o no se alcanzan los mínimos}
     \RETURN hoja con la clase mayoritaria.
 \ENDIF
@@ -135,7 +137,7 @@ El Algoritmo~\ref{alg:c45} resume la construcción del árbol. El procedimiento 
 \end{algorithmic}
 \end{algorithm}
 
-Los empates se resuelven por el orden de los atributos y, entre cortes numéricos del mismo atributo, por el menor umbral. Un atributo categórico se elimina del conjunto disponible después de usarse; uno numérico se conserva, porque los subconjuntos resultantes admiten nuevos cortes. En la predicción, un valor conocido sigue una sola rama; un valor faltante combina las distribuciones de todas las ramas con las proporciones aprendidas, y una categoría no vista usa las frecuencias locales del nodo alcanzado. La clase final es la de mayor probabilidad y los empates se resuelven con la primera clase observada en el entrenamiento.
+La tasa de ganancia puede favorecer divisiones con información de la partición muy baja, aunque aporten poco. Por eso solo compiten los atributos cuya ganancia alcanza al menos el promedio de los evaluados \cite{quinlan1993}. Los empates se resuelven por el orden de los atributos y, entre cortes numéricos del mismo atributo, por el menor umbral. Un atributo categórico se elimina del conjunto disponible después de usarse; uno numérico se conserva, porque los subconjuntos resultantes admiten nuevos cortes. En la predicción, un valor conocido sigue una sola rama; un valor faltante combina las distribuciones de todas las ramas con las proporciones aprendidas, y una categoría no vista usa las frecuencias locales del nodo alcanzado. La clase final es la de mayor probabilidad y los empates se resuelven con la primera clase observada en el entrenamiento.
 
 \subsection{Random Forest}
 
@@ -173,10 +175,100 @@ Preprocesamiento & Categorías nativas en C4.5; codificación binaria en \mbox{R
 \end{table}
 
 \section{Simulaciones y resultados}
-% TODO: incorporar configuración experimental y resultados de experimentos.
+
+\subsection{Configuración experimental}
+
+Se usaron los 303 casos del conjunto de datos, con la clase agrupada en ausencia y presencia de enfermedad. El experimento se repitió con 10 particiones estratificadas distintas, cada una con 242 casos de entrenamiento y 61 de prueba. Ambos modelos recibieron las mismas particiones. Con 61 casos, un acierto mueve la tasa cerca de 1,6 puntos porcentuales, por lo que una sola partición resulta poco confiable; por ese motivo se informan la media y el desvío de las repeticiones.
+
+Las métricas son la tasa de acierto y las versiones macro de precisión, exhaustividad y F1, que promedian ambas clases con igual peso. La variación de parámetros se usa para describir tendencias y no para seleccionar una configuración final. Por eso los valores por defecto son los que sostienen la comparación principal.
+
+\subsection{Comparación con los valores por defecto}
+
+La Tabla~\ref{tab:base} resume la comparación. Random Forest obtiene una tasa de acierto de 0,811 y C4.5, de 0,718. Ambos alcanzan 1,000 en entrenamiento. El árbol sin límites tiene en promedio 87 nodos, 46 hojas y profundidad 11: crece hasta separar casi cada caso de entrenamiento. Esta diferencia entre entrenamiento y prueba se denomina sobreajuste. En Random Forest también aparece la tasa perfecta en entrenamiento, pero el voto de muchos árboles compensa los errores individuales y conserva mejor rendimiento en prueba \cite{breiman2001}.
+
+\begin{table}[!ht]
+\centering
+\caption{Resultados sobre el conjunto de prueba, con media y desvío de 10 particiones.}
+\label{tab:base}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Métrica & C4.5 & Random Forest \\
+\midrule
+Tasa de acierto & $0{,}718 \pm 0{,}043$ & $0{,}811 \pm 0{,}047$ \\
+Precisión & $0{,}723 \pm 0{,}040$ & $0{,}816 \pm 0{,}048$ \\
+Exhaustividad & $0{,}719 \pm 0{,}040$ & $0{,}808 \pm 0{,}049$ \\
+F1 & $0{,}716 \pm 0{,}042$ & $0{,}808 \pm 0{,}049$ \\
+Tasa de acierto en entrenamiento & $1{,}000$ & $1{,}000$ \\
+Tiempo de entrenamiento (ms) & $989$ & $88$ \\
+Tiempo de predicción (ms) & $2{,}4$ & $8{,}4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los tiempos no comparan los algoritmos en igualdad de condiciones. C4.5 está escrito en Python para mostrar el procedimiento, mientras que scikit-learn usa código compilado. Aun así, predecir con un solo árbol resulta más rápido que consultar 100 árboles.
+
+La Figura~\ref{fig:matrices} muestra las matrices de confusión. Cada fila es la clase real y cada columna, la clase predicha; la diagonal contiene los aciertos. Cada matriz suma 610 predicciones, 61 casos por 10 particiones. La celda de presencia real y predicción de ausencia reúne los falsos negativos, el error de mayor costo en este problema, porque deja a un enfermo sin detectar. C4.5 comete 75 de esos errores sobre 280 casos con enfermedad y Random Forest, 64. Random Forest también genera menos falsas alarmas: 51 contra 97.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.82\textwidth]{figuras/matrices.pdf}
+\caption{Matrices de confusión de ambos modelos, sumadas sobre las 10 particiones.}
+\label{fig:matrices}
+\end{figure}
+
+\subsection{Efecto de cada parámetro}
+
+Se varió un parámetro por vez y los demás quedaron en su valor por defecto. Las Figuras~\ref{fig:c45-prof} y~\ref{fig:rf-prof} se leen de la siguiente manera. La línea continua es la tasa de acierto en prueba y la discontinua, en entrenamiento. La banda sombreada abarca un desvío hacia cada lado de la media. Si las dos curvas son bajas, el modelo es demasiado simple y hay subajuste. Si la de entrenamiento sube y la de prueba no acompaña, hay sobreajuste. Si las bandas de dos valores se superponen, la diferencia entre ellos no alcanza para afirmar que uno es mejor. La Tabla~\ref{tab:parametros} reúne todas las variaciones.
+
+\begin{table}[!ht]
+\centering
+\caption{Tasa de acierto media al variar cada parámetro, en prueba y en entrenamiento.}
+\label{tab:parametros}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Modelo y parámetro & Valor & Prueba & Entrenamiento \\
+\midrule
+C4.5: profundidad máxima & 1 / 4 / 10 & 0,703 / 0,757 / 0,720 & 0,753 / 0,876 / 0,993 \\
+C4.5: masa mínima para dividir & 2 / 10 / 40 & 0,718 / 0,752 / 0,739 & 1,000 / 0,925 / 0,812 \\
+C4.5: ganancia mínima (bits) & 0 / 0,05 / 0,1 & 0,718 / 0,731 / 0,741 & 1,000 / 0,982 / 0,876 \\
+C4.5: tasa de ganancia mínima & 0 / 0,1 / 0,2 & 0,718 / 0,744 / 0,554 & 1,000 / 0,937 / 0,573 \\
+Random Forest: cantidad de árboles & 10 / 50 / 200 & 0,797 / 0,811 / 0,808 & 0,990 / 1,000 / 1,000 \\
+Random Forest: profundidad máxima & 1 / 3 / 10 & 0,816 / 0,825 / 0,807 & 0,845 / 0,878 / 1,000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En C4.5, la profundidad máxima controla cuántas preguntas puede encadenar el árbol. Con un nivel la tasa en prueba es 0,703; llega a 0,757 con cuatro niveles y luego baja a 0,720, mientras que la de entrenamiento sigue subiendo hasta 0,993. A partir de ese punto el árbol aprende detalles del entrenamiento que no se repiten en casos nuevos.
+
+La masa mínima para dividir impide partir nodos con pocos casos. Al subirla de 2 a 10, la tasa en entrenamiento baja de 1,000 a 0,925 y la de prueba sube de 0,718 a 0,752, de modo que el árbol pierde reglas apoyadas en muy pocos casos. Con 40 la prueba baja a 0,739. La ganancia mínima no cambia el árbol hasta 0,02 bits y con 0,1 bits lleva la prueba a 0,741. La tasa de ganancia mínima tampoco lo cambia hasta 0,05 y mejora con 0,1, pero con 0,2 lleva la prueba a 0,554, un valor cercano a predecir siempre la clase más frecuente, que representa el 54\% de los casos: el árbol queda en subajuste.
+
+El filtro de ganancia también se evaluó por separado. Sin él, y eligiendo los umbrales por tasa de ganancia, el árbol sin límites obtiene 0,708 en lugar de 0,718, una diferencia menor que el desvío. Con un solo nivel, en cambio, la tasa baja de 0,703 a 0,646: el primer corte separa muy pocos casos y aporta poca información.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.82\textwidth]{figuras/c45_max_depth.pdf}
+\caption{C4.5: efecto de la profundidad máxima.}
+\label{fig:c45-prof}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.82\textwidth]{figuras/rf_max_depth.pdf}
+\caption{Random Forest: efecto de la profundidad máxima.}
+\label{fig:rf-prof}
+\end{figure}
+
+Random Forest resulta mucho menos sensible. Con 10 árboles alcanza 0,797 y desde 50 se estabiliza cerca de 0,81; agregar más árboles encarece el cálculo sin una mejora visible. Limitar la profundidad apenas cambia el resultado: va de 0,807 a 0,825 y sus bandas se superponen, incluso con árboles de un solo nivel. Las opciones restantes tampoco muestran diferencias mayores que el desvío: entre raíz cuadrada, logaritmo y todos los atributos por división la tasa va de 0,807 a 0,812; con Gini es 0,812 y con entropía, 0,805; con muestreo con reemplazo es 0,812 y sin él, 0,808.
 
 \section{Conclusiones}
-% TODO: redactar conclusiones después de analizar los resultados.
+
+Sobre este conjunto de datos, Random Forest obtuvo mejor rendimiento que el árbol C4.5 propio: 0,811 contra 0,718 de tasa de acierto con los valores por defecto, y menos falsos negativos. Limitar el crecimiento del árbol redujo esa distancia y llevó su tasa hasta 0,757, sin alcanzar al ensamble.
+
+La diferencia de estabilidad fue tan importante como la de rendimiento. C4.5 cambió de manera marcada con sus parámetros, por lo que requiere ajuste. Random Forest mantuvo resultados similares en casi todas las configuraciones probadas. A cambio, C4.5 produce un modelo legible, en el que cada predicción se explica con un camino de reglas, y esa propiedad se pierde al combinar 100 árboles.
+
+Los resultados tienen límites. Se usó un solo conjunto de datos, de 303 casos, y varias diferencias quedan dentro del desvío. La implementación no incluye la pospoda del C4.5 original, que podría reducir el sobreajuste sin fijar un límite de antemano. Queda como trabajo futuro incorporarla y repetir la comparación sobre otros conjuntos de datos.
 
 \bibliographystyle{splncs04}
 \bibliography{refs}

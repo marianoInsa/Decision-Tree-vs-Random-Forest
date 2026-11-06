@@ -210,7 +210,10 @@ Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
 - Los números generan dos ramas, `A ≤ t` y `A > t`. Se evalúan los valores distintos
   ordenados salvo el mayor, usando `t = v_i`; el atributo puede reutilizarse en
   descendientes. Cada corte se aprende solo con los casos de entrenamiento del nodo.
-- Se selecciona la partición con mayor Gain Ratio. Los empates exactos conservan
+- Con `filtro_ganancia=True`, valor por defecto, se aplican dos reglas de Quinlan contra
+  los cortes desparejos: el umbral numérico se elige por ganancia y solo compiten los
+  atributos con ganancia al menos promedio. Con `False` se vuelve a elegir todo por Gain Ratio.
+- Entre los candidatos se selecciona el de mayor Gain Ratio. Los empates exactos conservan
   el primer atributo por orden de columnas y el menor corte numérico.
 - La prepoda compara la ganancia de información con `threshold`, en bits, usando
   estrictamente `<`. El valor inicial `0.0` es una elección del proyecto y permite
