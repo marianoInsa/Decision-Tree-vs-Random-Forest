@@ -49,18 +49,18 @@ El contrato compartido entre C4.5 y Random Forest es **`predict(X)`**. Cada mode
 se entrena previamente con su propio procedimiento. No se exige una clase propia
 ni un contrato común para `fit` o `predict_proba`.
 
-Este contrato describe la entrada común sin nulos. HU-08 amplía C4.5 con
-faltantes y `predict_proba`, como se detalla más abajo; RF conserva las
-restricciones de esta tabla.
+Este contrato admite faltantes en los atributos: C4.5 los trata con pesos
+fraccionarios (HU-08) y RF los completa dentro de su pipeline. C4.5 agrega
+además `predict_proba`, como se detalla más abajo.
 
 | Elemento | Definición |
 |---|---|
-| Entrada `X` | `pandas.DataFrame` no vacío, sin valores faltantes, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
+| Entrada `X` | `pandas.DataFrame` no vacío, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
 | Salida | `pandas.DataFrame` con exactamente una columna llamada `prediccion` y una fila por caso de entrada. |
 | Correspondencia | Conserva exactamente el índice y el orden de `X`, incluso si los índices no son consecutivos. No modifica `X`. |
 | Etiquetas | Usa las mismas etiquetas de texto del dataset: las clases se detallan abajo. |
 | Uso | La función queda asociada a un modelo ya entrenado. Predecir no vuelve a entrenarlo. |
-| Entrada inválida | Un objeto distinto de un DataFrame produce `TypeError`; columnas incorrectas o desordenadas, datos vacíos o faltantes producen `ValueError`. |
+| Entrada inválida | Un objeto distinto de un DataFrame produce `TypeError`; columnas incorrectas o desordenadas o datos vacíos producen `ValueError`. |
 
 En la preparación, **`X` e `y` son DataFrames**: `X` contiene las características
 y `y` tiene una sola columna, `objetivo`. Sus índices están alineados. Para entrenar
@@ -94,7 +94,7 @@ Los tres problemas son de clasificación: la salida es una clase.
 |---|---|---:|---:|---|---:|
 | `lenses` | Discreto / categórico | 24 | 4 | `rigidos`: 4, `blandos`: 5, `sin_lentes`: 15 | 19 / 5 |
 | `iris` | Continuo | 150 | 4 | `setosa`: 50, `versicolor`: 50, `virginica`: 50 | 120 / 30 |
-| `heart` | Mixto | 270 | 13 | `ausencia`: 150, `presencia`: 120 | 216 / 54 |
+| `heart` | Mixto | 303 | 13 | `ausencia`: 164, `presencia`: 139 | 242 / 61 |
 
 ### Contact Lenses: discreto
 
@@ -131,13 +131,19 @@ Las cuatro características son numéricas y no hay valores faltantes. Se usa la
 versión distribuida por scikit-learn, que corrige dos puntos del dataset histórico;
 no se mezcla con otras versiones de Iris.
 
-### Statlog Heart: mixto
+### Heart Disease (Cleveland): mixto
 
-Fuente: [Statlog (Heart), UCI, identificador 145](https://archive.ics.uci.edu/dataset/145/statlog%2Bheart),
-[DOI: 10.24432/C57303](https://doi.org/10.24432/C57303).
-Se usa `data/raw/heart.dat`, con 270 casos y sin valores faltantes. Es la versión
-**Statlog**, distinta de Heart Disease/Cleveland de 303 casos. El objetivo original
-1 se convierte en `ausencia` y 2 en `presencia` de enfermedad cardíaca.
+Fuente: [Heart Disease, UCI, identificador 45](https://archive.ics.uci.edu/dataset/45/heart+disease),
+[DOI: 10.24432/C52P4X](https://doi.org/10.24432/C52P4X).
+Se usa `data/raw/processed.cleveland.data`, con 303 casos. El archivo `cleveland.data`
+no se usa porque el aviso de UCI indica que está dañado. El objetivo original 0 se
+convierte en `ausencia` y los valores 1 a 4 en `presencia` de enfermedad cardíaca.
+
+Seis casos tienen un atributo faltante, marcado con `?`: cuatro en `vasos` y dos en
+`thal`. C4.5 los trata con pesos fraccionarios. Random Forest los completa dentro de
+su pipeline, con la mediana en los atributos numéricos y el valor más frecuente en los
+categóricos, calculados solo con entrenamiento. Se completan en lugar de descartar los
+casos para no perder información y para que ambos modelos usen las mismas particiones.
 
 | Columna | Significado | Tratamiento |
 |---|---|---|
@@ -156,26 +162,27 @@ Se usa `data/raw/heart.dat`, con 270 casos y sin valores faltantes. Es la versi�
 | `thal` | Normal (3), defecto fijo (6) o reversible (7) | Categórico |
 
 Los siete atributos categóricos se convierten a texto conservando sus códigos
-originales. Así no se confunden con medidas continuas por estar escritos como
+originales y sus faltantes. Así no se confunden con medidas continuas por estar escritos como
 números en el archivo. Las seis columnas restantes conservan valores numéricos.
-La descripción original está en `data/raw/heart.doc`.
+La descripción original está en `data/raw/heart-disease.names`.
 
 ### Carga, limpieza y reproducibilidad
 
 - Las copias de UCI se conservan **sin alterar** junto con sus descripciones.
   Proceden de los archivos oficiales [lenses.zip](https://archive.ics.uci.edu/static/public/58/lenses.zip)
-  y [statlog+heart.zip](https://archive.ics.uci.edu/static/public/145/statlog+heart.zip).
+  y la [ficha de Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease).
   Sus fichas los distribuyen bajo [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   El notebook verifica sus hashes SHA-256 antes de cargarlos. No requiere red para
   cargar los datasets una vez instalado el entorno y disponible el repositorio.
 - La preparación asigna nombres, interpreta los tipos, decodifica las clases y
-  verifica tamaños, ausencia de nulos y alineación de índices. No elimina filas ni
-  imputa datos: los tres archivos de entrada ya están completos.
+  verifica tamaños y alineación de índices. No elimina filas ni imputa datos: Lenses
+  e Iris están completos y los faltantes de Heart se tratan en cada modelo.
 - Cada dataset se divide con `test_size=0.20`, `random_state=42`, `shuffle=True` y
   `stratify=y["objetivo"]`. La estratificación conserva aproximadamente las
   proporciones de clases, sujeta al redondeo de los tamaños enteros.
-- El modelo usa `OneHotEncoder(handle_unknown="ignore")` para categorías y deja
-  pasar las columnas numéricas. El codificador se ajusta **solo con `X_train`**.
+- El modelo completa los faltantes con `SimpleImputer` (valor más frecuente en
+  categorías, mediana en números) y usa `OneHotEncoder(handle_unknown="ignore")` para
+  categorías. El imputador y el codificador se ajustan **solo con `X_train`**.
   Una categoría nueva en prueba queda representada por ceros en su grupo de columnas.
   No se normalizan escalas: el modelo base usa árboles.
 - Se entrena `RandomForestClassifier` con 100 árboles, criterio Gini,
@@ -216,15 +223,14 @@ Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
   se rechazan etiquetas faltantes, infinitos y complejos.
 
 Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
-todas las heurísticas del sistema original. La pospoda, la visualización, los
-controles interactivos y los experimentos con selección automática de parámetros
-siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
+todas las heurísticas del sistema original. La pospoda y los experimentos con
+selección automática de parámetros siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
 un contrato común adicional con RF. C4.5 agrega `predict_proba(X)` como
 capacidad propia, sin modificar el contrato compartido `predict(X)`.
 
 La ejecución verifica el ejemplo de 15 casos de la filmina 27 contra cálculos
 manuales, un corte numérico conocido, la prepoda y la reutilización de atributos.
-También entrena sobre Contact Lenses, Iris y Statlog Heart y verifica el contrato.
+También entrena sobre Contact Lenses, Iris y Heart Disease y verifica el contrato.
 Las accuracies de entrenamiento y prueba son resultados base, no un umbral de
 aceptación ni una búsqueda de parámetros. Las futuras exploraciones deben usar
 validación dentro de entrenamiento y reservar test para la evaluación final.
@@ -263,8 +269,8 @@ multiplicar las filas representadas.
 Las fórmulas, decisiones, recomendaciones y ejemplo manual están en
 [docs/hu08_decisiones.md](docs/hu08_decisiones.md). El notebook incluye una
 demostración reproducible sobre los tres datasets con nulos en entrenamiento
-y test. RF conserva su contrato de entrada sin faltantes; HU-12 deberá definir
-su política de faltantes antes de comparar los modelos en esos escenarios.
+y test. RF completa los faltantes dentro de su pipeline, como se detalla en la
+sección de Heart Disease.
 
 ## HU-07: controles de crecimiento en C4.5
 
@@ -309,18 +315,53 @@ uv run jupyter lab notebooks/02_random_forest.ipynb
 
 Reiniciar el kernel y ejecutar todas las celdas en orden. El notebook encuentra
 `data/raw` desde la raíz del repositorio o desde `notebooks/`. En Colab, clonar el
-repositorio completo, instalar `requirements.txt` y situar el directorio de trabajo
-en la raíz del repositorio antes de ejecutar las celdas; subir solo el notebook no
+repositorio completo y situar el directorio de trabajo en la raíz del repositorio
+antes de ejecutar las celdas, sin instalar `requirements.txt`; subir solo el notebook no
 incluye los archivos de datos.
 
 La ejecución muestra tamaños y clases de las particiones, ejemplos de respuestas
 reales junto con predicciones, y accuracy de prueba para los tres datasets. También
 verifica el contrato de salida, la separación de train/test y la reproducibilidad.
 Estas métricas documentan una ejecución base. El notebook 01 ya usa las mismas
-particiones para el árbol propio; la comparación experimental con distintas
-parametrizaciones se desarrollará en el notebook 03.
+particiones para el árbol propio. El motor para ejecutar distintas
+parametrizaciones está en el notebook 03.
 
-Para ambos notebooks, una ejecución local correcta no acredita por sí sola la
+## Motor de benchmarking (HU-09)
+
+`02_random_forest.ipynb` permite crear un pipeline nuevo con `n_estimators`,
+`max_features`, `max_depth`, `criterion`, `bootstrap` y `random_state`; la
+ejecución base conserva sus valores anteriores. `03_experimentos.ipynb` carga
+las definiciones etiquetadas de los notebooks 01 y 02 y ejecuta grillas
+independientes para C4.5 y Random Forest, sin duplicar sus algoritmos.
+
+`ejecutar_benchmark(nombre_dataset, X_train, y_train, X_eval, y_eval, grillas,
+nombre_evaluacion="validacion", semilla=42, semilla_particion=None,
+protocolo_particion="particiones provistas")` recibe `X` e `y` como DataFrames
+con índices alineados; `y` tiene una columna `objetivo`. Las grillas usan las
+claves `C4.5` y `Random Forest`. C4.5 admite `threshold`, `max_depth`,
+`min_samples_split` y `min_gain_ratio`; RF admite los cinco hiperparámetros
+enumerados arriba. `threshold` es un mínimo de ganancia de información en bits
+y `min_gain_ratio` es un mínimo adimensional de Gain Ratio. La implementación
+actual de C4.5 ofrece prepoda mediante esos controles, sin pospoda.
+
+El resultado es un DataFrame con una fila por configuración y conjunto
+evaluado. Registra dataset, modelo, parámetros solicitados y efectivos,
+semilla, cantidad de casos, Accuracy, Precision, Recall y F1 macro/weighted,
+matriz de confusión con orden de clases explícito y tiempos de entrenamiento
+e inferencia en milisegundos. Los tiempos incluyen `fit` y `predict` con el
+preprocesamiento de RF, excluyen el cálculo de métricas, y pueden variar entre
+ejecuciones. La semilla y el protocolo de particionado se registran según los
+datos proporcionados por quien llama al motor. Las métricas indefinidas por
+división cero se fijan en 0.
+
+La comprobación del notebook crea una validación estratificada desde el
+entrenamiento de Iris: dos configuraciones por modelo producen ocho registros
+para entrenamiento y validación. La selección de parámetros debe realizarse
+con validación dentro de entrenamiento; test se reserva para evaluar una
+configuración elegida. Las baterías completas y las gráficas corresponden a
+HU-11, HU-12 y HU-13.
+
+Para los tres notebooks, una ejecución local correcta no acredita por sí sola la
 ejecución en Google Colab: esa comprobación debe hacerse también en la plataforma.
 
 ## Entorno local con uv
@@ -372,16 +413,34 @@ Verificar compilación, referencias, límite de páginas y preservación de auxi
 uv run python -m unittest discover -s tests -v
 ```
 
+## Interfaz
+
+`notebooks/04_interfaz.ipynb` permite usar el proyecto sin tocar código, con ipywidgets.
+Se elige el dataset, la proporción de prueba, las repeticiones y los parámetros de cada
+modelo, y se trabaja en tres pestañas:
+
+- **Comparar modelos:** métricas de test (media y desvío), accuracy de entrenamiento,
+  tiempos y matrices de confusión.
+- **Variar un parámetro:** curvas de accuracy en entrenamiento y test.
+- **Ver el árbol:** dibujo del árbol C4.5 con Graphviz, o en texto si no está disponible.
+
+Cada repetición usa otra partición, igual para ambos modelos. La interfaz reutiliza los
+modelos y el motor de `03_experimentos.ipynb`. En Colab clona el repositorio por su cuenta
+si hace falta. Las pruebas están en `tests/test_interfaz.py`.
+
 ## Google Colab
 
-Con el repositorio disponible en el entorno de Colab, ejecutar desde su raíz:
+Colab ya trae las librerías que usan los notebooks. **No instalar `requirements.txt` en
+Colab:** ese archivo fija versiones para el entorno local y reemplaza paquetes que Colab
+necesita, por lo que los notebooks dejan de arrancar (`Kernel died before replying to
+kernel_info`). Alcanza con clonar el repositorio y situarse en su raíz:
 
 ```python
-%pip install -r requirements.txt
+!git clone https://github.com/marianoInsa/Decision-Tree-vs-Random-Forest.git
+%cd Decision-Tree-vs-Random-Forest
 ```
 
-Luego abrir `notebooks/04_interfaz.ipynb`. Colab aporta el entorno Jupyter; `requirements.txt`
-instala las dependencias de los notebooks y se genera desde `uv.lock`.
+Luego abrir `notebooks/04_interfaz.ipynb`.
 
 ## Entregables y fechas
 
