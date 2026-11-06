@@ -17,15 +17,16 @@ FRACCION_TEST = 0.20
 
 HASHES = {
     "lenses.data": "711f22d5a4bed062bb715d39d23d54d2667206fbd97c94c7fd013ede47fb96c2",
-    "heart.dat": "f5f3b4204c285bafadd85cb735f38b47689f2be7047feb172dcbeab648110bf9",
+    "processed.cleveland.data": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
 }
 
 
-def leer_original(nombre, columnas):
+def leer_original(nombre, columnas, **opciones):
     contenido = (RAIZ / "data/raw" / nombre).read_bytes()
     if sha256(contenido).hexdigest() != HASHES[nombre]:
         raise ValueError(f"El archivo {nombre} no coincide con la copia original.")
-    return pd.read_csv(BytesIO(contenido), sep=r"\s+", header=None, names=columnas)
+    opciones.setdefault("sep", r"\s+")
+    return pd.read_csv(BytesIO(contenido), header=None, names=columnas, **opciones)
 
 
 def cargar_datasets():
@@ -51,20 +52,24 @@ def cargar_datasets():
     X_iris = iris.data.copy()
     y_iris = iris.target.map(dict(enumerate(iris.target_names))).to_frame("objetivo")
 
-    heart = leer_original("heart.dat", [
+    # Heart Disease (Cleveland): "?" marca un faltante y 1-4 indican presencia.
+    heart = leer_original("processed.cleveland.data", [
         "edad", "sexo", "dolor_pecho", "presion_reposo", "colesterol",
         "glucemia_alta", "ecg", "frecuencia_maxima", "angina_ejercicio",
         "depresion_st", "pendiente_st", "vasos", "thal", "objetivo"
-    ])
+    ], sep=",", na_values="?")
     X_heart = heart.drop(columns="objetivo").copy()
     categoricas_heart = [
         "sexo", "dolor_pecho", "glucemia_alta", "ecg", "angina_ejercicio",
         "pendiente_st", "thal"
     ]
     for columna in categoricas_heart:
-        X_heart[columna] = X_heart[columna].astype(int).astype(str)
-    y_heart = heart[["objetivo"]].copy()
-    y_heart["objetivo"] = y_heart["objetivo"].map({1: "ausencia", 2: "presencia"})
+        X_heart[columna] = X_heart[columna].map(
+            lambda valor: valor if pd.isna(valor) else str(int(valor))
+        )
+    y_heart = heart["objetivo"].gt(0).map(
+        {False: "ausencia", True: "presencia"}
+    ).to_frame("objetivo")
 
     return {
         "lenses": {"X": X_lenses, "y": y_lenses, "tipo": "discreto"},
@@ -73,11 +78,11 @@ def cargar_datasets():
     }
 
 
-TAMANOS = {"lenses": (24, 4), "iris": (150, 4), "heart": (270, 13)}
+TAMANOS = {"lenses": (24, 4), "iris": (150, 4), "heart": (303, 13)}
 CLASES = {
     "lenses": {"rigidos": 4, "blandos": 5, "sin_lentes": 15},
     "iris": {"setosa": 50, "versicolor": 50, "virginica": 50},
-    "heart": {"ausencia": 150, "presencia": 120},
+    "heart": {"ausencia": 164, "presencia": 139},
 }
 
 
