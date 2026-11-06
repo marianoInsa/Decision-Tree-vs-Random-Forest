@@ -316,8 +316,8 @@ uv run jupyter lab notebooks/02_random_forest.ipynb
 
 Reiniciar el kernel y ejecutar todas las celdas en orden. El notebook encuentra
 `data/raw` desde la raíz del repositorio o desde `notebooks/`. En Colab, clonar el
-repositorio completo, instalar `requirements.txt` y situar el directorio de trabajo
-en la raíz del repositorio antes de ejecutar las celdas; subir solo el notebook no
+repositorio completo y situar el directorio de trabajo en la raíz del repositorio
+antes de ejecutar las celdas, sin instalar `requirements.txt`; subir solo el notebook no
 incluye los archivos de datos.
 
 La ejecución muestra tamaños y clases de las particiones, ejemplos de respuestas
@@ -416,14 +416,17 @@ uv run python -m unittest discover -s tests -v
 
 ## Google Colab
 
-Con el repositorio disponible en el entorno de Colab, ejecutar desde su raíz:
+Colab ya trae las librerías que usan los notebooks. **No instalar `requirements.txt` en
+Colab:** ese archivo fija versiones para el entorno local y reemplaza paquetes que Colab
+necesita, por lo que los notebooks dejan de arrancar (`Kernel died before replying to
+kernel_info`). Alcanza con clonar el repositorio y situarse en su raíz:
 
 ```python
-%pip install -r requirements.txt
+!git clone https://github.com/marianoInsa/Decision-Tree-vs-Random-Forest.git
+%cd Decision-Tree-vs-Random-Forest
 ```
 
-Luego abrir `notebooks/04_interfaz.ipynb`. Colab aporta el entorno Jupyter; `requirements.txt`
-instala las dependencias de los notebooks y se genera desde `uv.lock`.
+Luego abrir `notebooks/04_interfaz.ipynb`.
 
 ## Entregables y fechas
 
