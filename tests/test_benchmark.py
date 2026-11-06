@@ -80,6 +80,20 @@ class TestBenchmark(unittest.TestCase):
         columnas = [c for c in primera if not c.startswith("tiempo_")]
         pd.testing.assert_frame_equal(primera[columnas], segunda[columnas])
 
+    def test_heart_disease_con_faltantes_en_rf(self):
+        from datos_tp import cargar_datasets, particionar
+
+        datos = cargar_datasets()["heart"]
+        self.assertEqual(datos["X"].shape, (303, 13))
+        self.assertEqual(int(datos["X"].isna().any(axis=1).sum()), 6)
+        partes = particionar(datos["X"], datos["y"])
+        self.assertTrue(partes["X_test"].isna().any(axis=None))
+        modelo = espacio["rf"].crear_modelo(partes["X_train"], n_estimators=5)
+        modelo.fit(partes["X_train"], partes["y_train"]["objetivo"])
+        salida = espacio["rf"].crear_predictor(modelo)(partes["X_test"])
+        self.assertEqual(len(salida), len(partes["X_test"]))
+        self.assertFalse(salida["prediccion"].isna().any())
+
     def test_parametros_invalidos_y_particiones_mal_alineadas(self):
         with self.assertRaisesRegex(ValueError, "parámetros no admitidos"):
             self.ejecutar({"C4.5": {"criterio": ["gini"]}, "Random Forest": {}})

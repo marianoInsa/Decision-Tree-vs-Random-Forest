@@ -56,8 +56,7 @@ hola soy un abstract
 
 Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión producen un modelo legible, en el que cada camino de la raíz a una hoja equivale a una regla \cite{liu2011}. Random Forest combina muchos árboles para reducir la dependencia de una sola estructura, a cambio de más cómputo y de una decisión que ya no se sigue en un único camino \cite{breiman2001}. C4.5 elige cada pregunta con un criterio orientado a separar las clases y admite atributos numéricos y categóricos \cite{liu2011}. Ninguno de los dos enfoques domina al otro en general: la elección depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
 
-% TODO: agregar el dataset que nos proporcione la cátedra.
-Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos [DATASET PENDIENTE]. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
+Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos Heart Disease, en su versión de Cleveland \cite{heartDisease}. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
 
 Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos.
 
@@ -98,7 +97,6 @@ q_j &= \frac{W_j}{W_K}.
 \label{eq:proporcion-rama}
 \end{align}
 Este mecanismo es propio de C4.5.
-% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del conjunto de entrenamiento y perder capacidad sobre casos nuevos. La prepoda detiene el crecimiento durante la construcción; la pospoda elimina subárboles después de construir el árbol completo. El C4.5 original emplea pospoda pesimista, mientras que este trabajo aplica solo prepoda y no implementa poda de reglas \cite{liu2011}. La construcción es codiciosa: cada división se elige con la información disponible en el nodo y no se revisa después, de modo que la prepoda puede detener el crecimiento antes de lo conveniente.
 
@@ -108,8 +106,6 @@ Random Forest combina $B$ árboles de decisión construidos con perturbaciones a
 
 Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}. La fuerza resume la separación media entre la clase correcta y las alternativas, y la correlación mide cuánto se parecen las respuestas de dos árboles. El análisis de este trabajo es empírico y no usa esa caracterización para calcular el error. En este trabajo se usa la implementación de scikit-learn (...); su configuración se detalla en la sección 5.
 % TODO: agregar qué método específico de scikit-learn se utiliza
-
-% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 \section{Breve descripción de los algoritmos desarrollados}
 
@@ -143,15 +139,15 @@ Los empates se resuelven por el orden de los atributos y, entre cortes numérico
 
 \subsection{Random Forest}
 
-La implementación de Random Forest usa scikit-learn ...
-% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
+La implementación de Random Forest usa scikit-learn \cite{scikitRF}. Los valores faltantes se completan antes de construir los árboles, en el mismo flujo que codifica las categorías.
 
 \section{Descripción de la solución implementada}
 
 \subsection{Arquitectura y protocolo de evaluación}
 
-La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La preparación carga el conjunto de datos, deduce el tipo de cada atributo y construye una partición estratificada con el 80\% de los casos para entrenamiento y el 20\% para prueba, con una semilla fija de 42. Ambos modelos usan las mismas particiones y las mismas métricas, y ninguno accede al conjunto de prueba durante el entrenamiento. C4.5 admite valores faltantes y categorías nativas. El tratamiento de valores faltantes en Random Forest se definirá junto con la implementación de ese modelo. Random Forest transforma las categorías en columnas binarias dentro de su flujo.
-% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
+La solución se organiza en tres capas: preparación de los datos, modelos y evaluación. La preparación carga el conjunto de datos, deduce el tipo de cada atributo y construye una partición estratificada con el 80\% de los casos para entrenamiento y el 20\% para prueba, con una semilla fija de 42. Ambos modelos usan las mismas particiones y las mismas métricas, y ninguno accede al conjunto de prueba durante el entrenamiento. C4.5 admite valores faltantes y categorías nativas. Random Forest recibe los valores faltantes ya completados, con la mediana en los atributos numéricos y el valor más frecuente en los categóricos. Random Forest transforma las categorías en columnas binarias dentro de su flujo.
+
+El conjunto de datos tiene 303 casos y 6 de ellos, cerca del 2\%, presentan un valor faltante: 4 en la cantidad de vasos principales y 2 en el atributo thal. Se optó por completar esos valores en lugar de descartar los casos, porque descartarlos implica perder datos que pueden ser valiosos aunque estén incompletos \cite{scikitImpute}. Esta decisión conserva los 303 casos y las mismas particiones para ambos modelos, y permite que C4.5 aplique su tratamiento propio. Los valores de reemplazo se calculan solo con el conjunto de entrenamiento, para que el conjunto de prueba no influya en la preparación.
 
 La codificación de Random Forest se ajusta solo con el conjunto de entrenamiento y una categoría no vista se representa con ceros; C4.5 conserva una rama por categoría. Esas diferencias de preprocesamiento son una posible fuente de sesgo en la comparación y se retoman al interpretar los resultados. Ambos modelos exponen el mismo contrato de predicción: reciben una tabla de datos, devuelven una columna con la clase predicha y conservan el índice y el orden de las filas sin modificar la entrada. La validación exige las mismas columnas y tipos del entrenamiento, y los desempates del árbol son deterministas. Las probabilidades del árbol son frecuencias ponderadas y no están calibradas.
 
@@ -169,13 +165,12 @@ Los principales problemas fueron el tratamiento de atributos continuos, los valo
 Problema & Tratamiento \\
 \midrule
 Atributos continuos & Cortes binarios en valores observados; sin grilla global \\
-Valores faltantes & C4.5 los reparte con peso proporcional \\
+Valores faltantes & C4.5 los reparte con peso proporcional; \mbox{Random Forest} los recibe completados \\
 Crecimiento & Prepoda con cuatro controles; sin pospoda \\
 Preprocesamiento & Categorías nativas en C4.5; codificación binaria en \mbox{Random Forest} \\
 \bottomrule
 \end{tabular}
 \end{table}
-% TODO: describir el tratamiento de valores faltantes de Random Forest cuando esté implementado.
 
 \section{Simulaciones y resultados}
 % TODO: incorporar configuración experimental y resultados de experimentos.

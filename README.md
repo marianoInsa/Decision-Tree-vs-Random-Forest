@@ -49,18 +49,18 @@ El contrato compartido entre C4.5 y Random Forest es **`predict(X)`**. Cada mode
 se entrena previamente con su propio procedimiento. No se exige una clase propia
 ni un contrato común para `fit` o `predict_proba`.
 
-Este contrato describe la entrada común sin nulos. HU-08 amplía C4.5 con
-faltantes y `predict_proba`, como se detalla más abajo; RF conserva las
-restricciones de esta tabla.
+Este contrato admite faltantes en los atributos: C4.5 los trata con pesos
+fraccionarios (HU-08) y RF los completa dentro de su pipeline. C4.5 agrega
+además `predict_proba`, como se detalla más abajo.
 
 | Elemento | Definición |
 |---|---|
-| Entrada `X` | `pandas.DataFrame` no vacío, sin valores faltantes, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
+| Entrada `X` | `pandas.DataFrame` no vacío, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
 | Salida | `pandas.DataFrame` con exactamente una columna llamada `prediccion` y una fila por caso de entrada. |
 | Correspondencia | Conserva exactamente el índice y el orden de `X`, incluso si los índices no son consecutivos. No modifica `X`. |
 | Etiquetas | Usa las mismas etiquetas de texto del dataset: las clases se detallan abajo. |
 | Uso | La función queda asociada a un modelo ya entrenado. Predecir no vuelve a entrenarlo. |
-| Entrada inválida | Un objeto distinto de un DataFrame produce `TypeError`; columnas incorrectas o desordenadas, datos vacíos o faltantes producen `ValueError`. |
+| Entrada inválida | Un objeto distinto de un DataFrame produce `TypeError`; columnas incorrectas o desordenadas o datos vacíos producen `ValueError`. |
 
 En la preparación, **`X` e `y` son DataFrames**: `X` contiene las características
 y `y` tiene una sola columna, `objetivo`. Sus índices están alineados. Para entrenar
@@ -94,7 +94,7 @@ Los tres problemas son de clasificación: la salida es una clase.
 |---|---|---:|---:|---|---:|
 | `lenses` | Discreto / categórico | 24 | 4 | `rigidos`: 4, `blandos`: 5, `sin_lentes`: 15 | 19 / 5 |
 | `iris` | Continuo | 150 | 4 | `setosa`: 50, `versicolor`: 50, `virginica`: 50 | 120 / 30 |
-| `heart` | Mixto | 270 | 13 | `ausencia`: 150, `presencia`: 120 | 216 / 54 |
+| `heart` | Mixto | 303 | 13 | `ausencia`: 164, `presencia`: 139 | 242 / 61 |
 
 ### Contact Lenses: discreto
 
@@ -131,13 +131,19 @@ Las cuatro características son numéricas y no hay valores faltantes. Se usa la
 versión distribuida por scikit-learn, que corrige dos puntos del dataset histórico;
 no se mezcla con otras versiones de Iris.
 
-### Statlog Heart: mixto
+### Heart Disease (Cleveland): mixto
 
-Fuente: [Statlog (Heart), UCI, identificador 145](https://archive.ics.uci.edu/dataset/145/statlog%2Bheart),
-[DOI: 10.24432/C57303](https://doi.org/10.24432/C57303).
-Se usa `data/raw/heart.dat`, con 270 casos y sin valores faltantes. Es la versión
-**Statlog**, distinta de Heart Disease/Cleveland de 303 casos. El objetivo original
-1 se convierte en `ausencia` y 2 en `presencia` de enfermedad cardíaca.
+Fuente: [Heart Disease, UCI, identificador 45](https://archive.ics.uci.edu/dataset/45/heart+disease),
+[DOI: 10.24432/C52P4X](https://doi.org/10.24432/C52P4X).
+Se usa `data/raw/processed.cleveland.data`, con 303 casos. El archivo `cleveland.data`
+no se usa porque el aviso de UCI indica que está dañado. El objetivo original 0 se
+convierte en `ausencia` y los valores 1 a 4 en `presencia` de enfermedad cardíaca.
+
+Seis casos tienen un atributo faltante, marcado con `?`: cuatro en `vasos` y dos en
+`thal`. C4.5 los trata con pesos fraccionarios. Random Forest los completa dentro de
+su pipeline, con la mediana en los atributos numéricos y el valor más frecuente en los
+categóricos, calculados solo con entrenamiento. Se completan en lugar de descartar los
+casos para no perder información y para que ambos modelos usen las mismas particiones.
 
 | Columna | Significado | Tratamiento |
 |---|---|---|
@@ -156,26 +162,27 @@ Se usa `data/raw/heart.dat`, con 270 casos y sin valores faltantes. Es la versi�
 | `thal` | Normal (3), defecto fijo (6) o reversible (7) | Categórico |
 
 Los siete atributos categóricos se convierten a texto conservando sus códigos
-originales. Así no se confunden con medidas continuas por estar escritos como
+originales y sus faltantes. Así no se confunden con medidas continuas por estar escritos como
 números en el archivo. Las seis columnas restantes conservan valores numéricos.
-La descripción original está en `data/raw/heart.doc`.
+La descripción original está en `data/raw/heart-disease.names`.
 
 ### Carga, limpieza y reproducibilidad
 
 - Las copias de UCI se conservan **sin alterar** junto con sus descripciones.
   Proceden de los archivos oficiales [lenses.zip](https://archive.ics.uci.edu/static/public/58/lenses.zip)
-  y [statlog+heart.zip](https://archive.ics.uci.edu/static/public/145/statlog+heart.zip).
+  y la [ficha de Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease).
   Sus fichas los distribuyen bajo [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   El notebook verifica sus hashes SHA-256 antes de cargarlos. No requiere red para
   cargar los datasets una vez instalado el entorno y disponible el repositorio.
 - La preparación asigna nombres, interpreta los tipos, decodifica las clases y
-  verifica tamaños, ausencia de nulos y alineación de índices. No elimina filas ni
-  imputa datos: los tres archivos de entrada ya están completos.
+  verifica tamaños y alineación de índices. No elimina filas ni imputa datos: Lenses
+  e Iris están completos y los faltantes de Heart se tratan en cada modelo.
 - Cada dataset se divide con `test_size=0.20`, `random_state=42`, `shuffle=True` y
   `stratify=y["objetivo"]`. La estratificación conserva aproximadamente las
   proporciones de clases, sujeta al redondeo de los tamaños enteros.
-- El modelo usa `OneHotEncoder(handle_unknown="ignore")` para categorías y deja
-  pasar las columnas numéricas. El codificador se ajusta **solo con `X_train`**.
+- El modelo completa los faltantes con `SimpleImputer` (valor más frecuente en
+  categorías, mediana en números) y usa `OneHotEncoder(handle_unknown="ignore")` para
+  categorías. El imputador y el codificador se ajustan **solo con `X_train`**.
   Una categoría nueva en prueba queda representada por ceros en su grupo de columnas.
   No se normalizan escalas: el modelo base usa árboles.
 - Se entrena `RandomForestClassifier` con 100 árboles, criterio Gini,
@@ -224,7 +231,7 @@ capacidad propia, sin modificar el contrato compartido `predict(X)`.
 
 La ejecución verifica el ejemplo de 15 casos de la filmina 27 contra cálculos
 manuales, un corte numérico conocido, la prepoda y la reutilización de atributos.
-También entrena sobre Contact Lenses, Iris y Statlog Heart y verifica el contrato.
+También entrena sobre Contact Lenses, Iris y Heart Disease y verifica el contrato.
 Las accuracies de entrenamiento y prueba son resultados base, no un umbral de
 aceptación ni una búsqueda de parámetros. Las futuras exploraciones deben usar
 validación dentro de entrenamiento y reservar test para la evaluación final.
@@ -263,8 +270,8 @@ multiplicar las filas representadas.
 Las fórmulas, decisiones, recomendaciones y ejemplo manual están en
 [docs/hu08_decisiones.md](docs/hu08_decisiones.md). El notebook incluye una
 demostración reproducible sobre los tres datasets con nulos en entrenamiento
-y test. RF conserva su contrato de entrada sin faltantes; HU-12 deberá definir
-su política de faltantes antes de comparar los modelos en esos escenarios.
+y test. RF completa los faltantes dentro de su pipeline, como se detalla en la
+sección de Heart Disease.
 
 ## HU-07: controles de crecimiento en C4.5
 
