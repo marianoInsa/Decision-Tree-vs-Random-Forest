@@ -17,11 +17,15 @@ INPUT_FILES = (
 MAX_PAGES = 12
 
 
+# Compila en una carpeta temporal para no dejar archivos auxiliares de LaTeX en el repositorio
+# y verifica el límite de 12 páginas que pide la consigna.
 def build_paper():
     with tempfile.TemporaryDirectory(prefix="lncs-paper-") as temporary_directory:
         build_dir = Path(temporary_directory)
         for filename in INPUT_FILES:
             shutil.copy2(PAPER_DIR / filename, build_dir / filename)
+        # Las figuras también tienen que estar en la carpeta temporal.
+        shutil.copytree(PAPER_DIR / "figuras", build_dir / "figuras")
 
         subprocess.run(["tectonic", SOURCE_NAME], cwd=build_dir, check=True)
 
