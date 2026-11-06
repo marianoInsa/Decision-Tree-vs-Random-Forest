@@ -223,9 +223,8 @@ Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
   se rechazan etiquetas faltantes, infinitos y complejos.
 
 Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
-todas las heurísticas del sistema original. La pospoda, la visualización, los
-controles interactivos y los experimentos con selección automática de parámetros
-siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
+todas las heurísticas del sistema original. La pospoda y los experimentos con
+selección automática de parámetros siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
 un contrato común adicional con RF. C4.5 agrega `predict_proba(X)` como
 capacidad propia, sin modificar el contrato compartido `predict(X)`.
 
@@ -413,6 +412,21 @@ Verificar compilación, referencias, límite de páginas y preservación de auxi
 ```sh
 uv run python -m unittest discover -s tests -v
 ```
+
+## Interfaz
+
+`notebooks/04_interfaz.ipynb` permite usar el proyecto sin tocar código, con ipywidgets.
+Se elige el dataset, la proporción de prueba, las repeticiones y los parámetros de cada
+modelo, y se trabaja en tres pestañas:
+
+- **Comparar modelos:** métricas de test (media y desvío), accuracy de entrenamiento,
+  tiempos y matrices de confusión.
+- **Variar un parámetro:** curvas de accuracy en entrenamiento y test.
+- **Ver el árbol:** dibujo del árbol C4.5 con Graphviz, o en texto si no está disponible.
+
+Cada repetición usa otra partición, igual para ambos modelos. La interfaz reutiliza los
+modelos y el motor de `03_experimentos.ipynb`. En Colab clona el repositorio por su cuenta
+si hace falta. Las pruebas están en `tests/test_interfaz.py`.
 
 ## Google Colab
 
