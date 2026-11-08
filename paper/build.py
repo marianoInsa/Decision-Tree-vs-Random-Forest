@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import sys
 
 from pypdf import PdfReader
 
@@ -13,6 +14,8 @@ INPUT_FILES = (
     "llncs.cls",
     "splncs04.bst",
     "refs.bib",
+    "tablas_resultados.tex",
+    "observaciones_resultados.tex",
 )
 MAX_PAGES = 12
 
@@ -22,8 +25,15 @@ def build_paper():
         build_dir = Path(temporary_directory)
         for filename in INPUT_FILES:
             shutil.copy2(PAPER_DIR / filename, build_dir / filename)
+        # Las figuras exportadas pertenecen a la misma ejecución que las tablas.
+        shutil.copytree(PAPER_DIR / "figuras", build_dir / "figuras")
 
-        subprocess.run(["tectonic", SOURCE_NAME], cwd=build_dir, check=True)
+        # Buscar también junto al Python activo cuando se ejecuta sin activar el entorno.
+        compilador = shutil.which("tectonic")
+        if compilador is None:
+            candidato = Path(sys.executable).parent / ("tectonic.exe" if sys.platform == "win32" else "tectonic")
+            compilador = str(candidato) if candidato.is_file() else "tectonic"
+        subprocess.run([compilador, SOURCE_NAME], cwd=build_dir, check=True)
 
         built_pdf = build_dir / Path(SOURCE_NAME).with_suffix(".pdf").name
         page_count = len(PdfReader(built_pdf).pages)

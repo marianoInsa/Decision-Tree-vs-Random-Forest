@@ -52,7 +52,7 @@ class TestControlesArbol(unittest.TestCase):
                 modulo.modulo_arbol.ArbolC45(**parametros)
         arbol = modulo.modulo_arbol.ArbolC45(max_depth=3, min_samples_split=4, min_gain_ratio=0.1)
         self.assertEqual(arbol.obtener_parametros(), dict(umbral_ganancia=0.0,
-            profundidad_maxima=3, minimo_muestras_division=4, minima_razon_ganancia=0.1))
+            profundidad_maxima=3, minimo_muestras_division=4, minima_razon_ganancia=0.1, filtro_ganancia=False))
 
 
 class TestBosque(unittest.TestCase):

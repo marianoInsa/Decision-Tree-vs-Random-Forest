@@ -1,393 +1,76 @@
-# Decision Tree C4.5 vs Random Forest — TP Inteligencia Artificial 2026
+# Árbol de decisión C4.5 y Random Forest
 
-**Materia:** Inteligencia Artificial — 5.º nivel ISI — ciclo lectivo 2026
+Trabajo práctico de Inteligencia Artificial, ciclo 2026. Integrantes: Franco Sanchez, Laura Cornaló Bassan, Mariano Insaurralde, Matías Fernandez y Philippe Maurel.
 
-**Integrantes:**
+El proyecto compara un árbol propio basado en C4.5 con Random Forest de scikit-learn. Los notebooks explican sus fórmulas, decisiones, parámetros y contratos.
 
-- Franco Sanchez
-- Laura Cornaló Bassan
-- Mariano Insaurralde
-- Matías Fernandez
-- Philippe Maurel
-
-**[Tablero Trello](https://trello.com/invite/b/6aad9cea2c7a193807b1a25d/ATTI84c720416850d0a9b75c985ecb9163780238D185/tp-inteligencia-artificial)**
-
-## Objetivo
-
-Implementar desde cero un **Decision Tree basado en C4.5** y comparar su rendimiento con
-**Random Forest** de scikit-learn en problemas de clasificación, variando la parametrización
-y midiendo métricas de desempeño. El Decision Tree debe ser propio; para Random Forest se
-permite usar scikit-learn.
-
-## Estructura
-
-```text
-├── data/raw/                 # Copias originales de los datasets de UCI
-├── datos_tp.py               # Carga y partición compartidas por DT y RF
-├── docs/
-├── notebooks/
-│   ├── 01_decision_tree_c45.ipynb
-│   ├── 02_random_forest.ipynb
-│   ├── 03_experimentos.ipynb
-│   └── 04_interfaz.ipynb
-├── paper/
-│   └── Paper_Equipo-QG_TP_IA.pdf  # Informe final del TP
-├── tests/
-│   ├── test_c45.py
-│   ├── test_c45_nulos.py
-│   ├── test_c45_hu07.py
-│   └── test_paper_build.py
-├── .python-version
-├── pyproject.toml
-├── requirements.txt   # exportado para Google Colab
-└── uv.lock
-```
-
-## Contrato común de predicción
-
-El contrato compartido entre C4.5 y Random Forest es **`predict(X)`**. Cada modelo
-se entrena previamente con su propio procedimiento. No se exige una clase propia
-ni un contrato común para `fit` o `predict_proba`.
-
-Este contrato describe la entrada común sin nulos. HU-08 amplía C4.5 con
-faltantes y `predict_proba`, como se detalla más abajo; RF conserva las
-restricciones de esta tabla.
-
-| Elemento | Definición |
+| Archivo | Contenido |
 |---|---|
-| Entrada `X` | `pandas.DataFrame` no vacío, sin valores faltantes, con las mismas columnas, orden y significado que las características de entrenamiento. No incluye la respuesta correcta ni identificadores como características. |
-| Salida | `pandas.DataFrame` con exactamente una columna llamada `prediccion` y una fila por caso de entrada. |
-| Correspondencia | Conserva exactamente el índice y el orden de `X`, incluso si los índices no son consecutivos. No modifica `X`. |
-| Etiquetas | Usa las mismas etiquetas de texto del dataset: las clases se detallan abajo. |
-| Uso | La función queda asociada a un modelo ya entrenado. Predecir no vuelve a entrenarlo. |
-| Entrada inválida | Un objeto distinto de un DataFrame produce `TypeError`; columnas incorrectas o desordenadas, datos vacíos o faltantes producen `ValueError`. |
+| `01_decision_tree_c45.ipynb` | Definiciones del árbol: categorías, números, faltantes, prepoda y filtro opcional. |
+| `02_random_forest.ipynb` | Definiciones del bosque, preparación, entrenamiento y predicción. |
+| `03_experimentos.ipynb` | Ejemplos, verificaciones, validación interna, faltantes y barridos de parámetros. |
+| `04_interfaz.ipynb` | Controles para comparar, variar un parámetro y visualizar el árbol. |
+| `datos_tp.py` | Carga común de datos, etiquetas, tipos y particiones. |
+| `paper/` | Informe LNCS y resultados regenerables. |
 
-En la preparación, **`X` e `y` son DataFrames**: `X` contiene las características
-y `y` tiene una sola columna, `objetivo`. Sus índices están alineados. Para entrenar
-scikit-learn se extrae internamente esa columna como vector; esto no cambia el formato
-de `y` que conserva el experimento.
+## Datos
 
-En `02_random_forest.ipynb`, `crear_predictor(modelo)` devuelve una función con la
-firma `predict(X: pd.DataFrame) -> pd.DataFrame`. Esta función adapta la salida del
-modelo de scikit-learn al contrato, sin crear otra clase de Random Forest. Para usar
-un predictor entrenado, por ejemplo:
+| Identificador | Tipo | Casos × atributos | Clases | Ausencias naturales |
+|---|---|---:|---|---|
+| `lenses` | Categórico | 24 × 4 | `rigidos`: 4; `blandos`: 5; `sin_lentes`: 15 | Ninguna |
+| `iris` | Continuo | 150 × 4 | Tres especies, 50 casos cada una | Ninguna |
+| `heart` | Mixto | 303 × 13 | `ausencia`: 164; `presencia`: 139 | Cuatro en `vasos`, dos en `thal` |
 
-```python
-predict = predictores["iris"]
-predicciones = predict(particiones["iris"]["X_test"])
-```
+Se usa `processed.cleveland.data` de [Heart Disease de UCI](https://archive.ics.uci.edu/dataset/45/heart+disease). Cero significa ausencia y uno a cuatro se agrupa como presencia. Se conservan las 303 filas y los signos `?` como valores ausentes. Los códigos categóricos pasan a texto. Las copias de Statlog se retiran del árbol actual para evitar confundir las dos versiones; permanecen disponibles en el historial Git.
 
-Ambos algoritmos deben compararse sobre **los mismos índices de entrenamiento y
-prueba**, y con las mismas etiquetas reales. Las transformaciones particulares de
-cada modelo se ajustan solo con entrenamiento. El notebook conserva los datos originales
-de entrada y las particiones en `datasets` y `particiones`; el one-hot de Random Forest
-se aplica dentro de su pipeline. Ambos notebooks importan la misma preparación de
-`datos_tp.py`. El árbol propio admite categorías y números, por lo que puede recibir
-los tres datasets originales sin usar el one-hot de RF.
+Las copias locales de [Lenses](https://archive.ics.uci.edu/dataset/58/lenses) y Cleveland se verifican por SHA-256. Iris se obtiene de scikit-learn. No se requiere red para cargar los datos tras preparar el entorno. Los identificadores no se usan como atributos.
 
-## Datasets base
+## Entorno y ejecución local
 
-El tipo discreto, continuo o mixto describe **las características de entrada**.
-Los tres problemas son de clasificación: la salida es una clase.
-
-| Identificador | Tipo | Casos | Características | Clases y cantidades | Train / test |
-|---|---|---:|---:|---|---:|
-| `lenses` | Discreto / categórico | 24 | 4 | `rigidos`: 4, `blandos`: 5, `sin_lentes`: 15 | 19 / 5 |
-| `iris` | Continuo | 150 | 4 | `setosa`: 50, `versicolor`: 50, `virginica`: 50 | 120 / 30 |
-| `heart` | Mixto | 270 | 13 | `ausencia`: 150, `presencia`: 120 | 216 / 54 |
-
-### Contact Lenses: discreto
-
-Fuente: [Lenses, UCI, identificador 58](https://archive.ics.uci.edu/dataset/58/lenses),
-asociado al trabajo de J. Cendrowska sobre PRISM (1987). El problema didáctico consiste
-en clasificar el tipo de lentes de contacto a partir de cuatro atributos categóricos:
-
-| Columna | Valores que recibe el modelo |
-|---|---|
-| `edad` | `joven`, `prepresbicia`, `presbicia` (grupos de edad, no años) |
-| `prescripcion` | `miopia`, `hipermetropia` |
-| `astigmatismo` | `no`, `si` |
-| `lagrimas` | `reducida`, `normal` |
-
-La clase original 1 se convierte en `rigidos`, 2 en `blandos` y 3 en `sin_lentes`.
-El identificador original se usa como índice, nunca como característica. Se usa
-`data/raw/lenses.data` completo: identificador, **cuatro atributos** y clase. La ficha
-web de UCI presenta una discrepancia en su contador de atributos; la descripción
-original conservada en `data/raw/lenses.names` documenta los cuatro, incluida la
-producción de lágrimas. No hay valores faltantes.
-
-Es útil para seguir los caminos de un árbol pequeño. Como el test tiene solo cinco
-casos, cada acierto cambia la accuracy en 20 puntos porcentuales; no permite extraer
-conclusiones sólidas sobre la superioridad de un algoritmo.
-
-### Iris: continuo
-
-Fuente: [Iris incluido en scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_iris.html),
-dataset clásico de Fisher. Se carga con `load_iris(as_frame=True)`, sin descarga.
-Contiene las longitudes y anchuras del sépalo y del pétalo, en centímetros:
-`sepal length (cm)`, `sepal width (cm)`, `petal length (cm)` y `petal width (cm)`.
-El objetivo es identificar la especie: `setosa`, `versicolor` o `virginica`.
-Las cuatro características son numéricas y no hay valores faltantes. Se usa la
-versión distribuida por scikit-learn, que corrige dos puntos del dataset histórico;
-no se mezcla con otras versiones de Iris.
-
-### Statlog Heart: mixto
-
-Fuente: [Statlog (Heart), UCI, identificador 145](https://archive.ics.uci.edu/dataset/145/statlog%2Bheart),
-[DOI: 10.24432/C57303](https://doi.org/10.24432/C57303).
-Se usa `data/raw/heart.dat`, con 270 casos y sin valores faltantes. Es la versión
-**Statlog**, distinta de Heart Disease/Cleveland de 303 casos. El objetivo original
-1 se convierte en `ausencia` y 2 en `presencia` de enfermedad cardíaca.
-
-| Columna | Significado | Tratamiento |
-|---|---|---|
-| `edad` | Edad en años | Numérico |
-| `sexo` | Código de sexo de la fuente (0/1) | Categórico |
-| `dolor_pecho` | Tipo de dolor torácico (1–4) | Categórico |
-| `presion_reposo` | Presión arterial en reposo | Numérico |
-| `colesterol` | Colesterol sérico en mg/dl | Numérico |
-| `glucemia_alta` | Glucemia en ayunas mayor a 120 mg/dl (0/1) | Categórico |
-| `ecg` | Resultado electrocardiográfico (0/1/2) | Categórico |
-| `frecuencia_maxima` | Frecuencia cardíaca máxima alcanzada | Numérico |
-| `angina_ejercicio` | Angina inducida por ejercicio (0/1) | Categórico |
-| `depresion_st` | Depresión del segmento ST inducida por ejercicio | Numérico |
-| `pendiente_st` | Categoría ordinal de pendiente del segmento ST (1/2/3) | Categórico |
-| `vasos` | Cantidad de vasos principales visualizados (0–3) | Numérico, conteo discreto |
-| `thal` | Normal (3), defecto fijo (6) o reversible (7) | Categórico |
-
-Los siete atributos categóricos se convierten a texto conservando sus códigos
-originales. Así no se confunden con medidas continuas por estar escritos como
-números en el archivo. Las seis columnas restantes conservan valores numéricos.
-La descripción original está en `data/raw/heart.doc`.
-
-### Carga, limpieza y reproducibilidad
-
-- Las copias de UCI se conservan **sin alterar** junto con sus descripciones.
-  Proceden de los archivos oficiales [lenses.zip](https://archive.ics.uci.edu/static/public/58/lenses.zip)
-  y [statlog+heart.zip](https://archive.ics.uci.edu/static/public/145/statlog+heart.zip).
-  Sus fichas los distribuyen bajo [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-  El notebook verifica sus hashes SHA-256 antes de cargarlos. No requiere red para
-  cargar los datasets una vez instalado el entorno y disponible el repositorio.
-- La preparación asigna nombres, interpreta los tipos, decodifica las clases y
-  verifica tamaños, ausencia de nulos y alineación de índices. No elimina filas ni
-  imputa datos: los tres archivos de entrada ya están completos.
-- Cada dataset se divide con `test_size=0.20`, `random_state=42`, `shuffle=True` y
-  `stratify=y["objetivo"]`. La estratificación conserva aproximadamente las
-  proporciones de clases, sujeta al redondeo de los tamaños enteros.
-- El modelo usa `OneHotEncoder(handle_unknown="ignore")` para categorías y deja
-  pasar las columnas numéricas. El codificador se ajusta **solo con `X_train`**.
-  Una categoría nueva en prueba queda representada por ceros en su grupo de columnas.
-  No se normalizan escalas: el modelo base usa árboles.
-- Se entrena `RandomForestClassifier` con 100 árboles, criterio Gini,
-  `max_features="sqrt"`, bootstrap, profundidad sin límite, `random_state=42`
-  y `n_jobs=1`. Son parámetros base, sin búsqueda de hiperparámetros ni ajuste
-  usando el conjunto de prueba.
-- `uv sync --locked` reproduce las dependencias fijadas en `uv.lock`. El notebook
-  muestra las versiones usadas y verifica que al repetir partición y entrenamiento
-  se obtengan los mismos índices y predicciones en ese entorno.
-
-## Ejecutar el árbol propio
-
-```sh
-uv run jupyter lab notebooks/01_decision_tree_c45.ipynb
-```
-
-El notebook implementa `Nodo`, `ArbolC45`, las fórmulas de Entropía, Ganancia de
-Información, Split Info y Gain Ratio, y la construcción recursiva. Sus celdas
-explican la correspondencia con **SEM04-DecisionTrees, filminas 23–30**, y con
-Liu (2011), pp. 70–76, cuya copia está en `docs/libros/`.
-
-- Las categorías generan una rama por valor observado; el atributo usado se retira
-  de ese camino. Los códigos categóricos deben estar representados como texto,
-  booleanos o dtype `category`, tal como se preparan en los datasets del TP.
-- Los números generan dos ramas, `A ≤ t` y `A > t`. Se evalúan los valores distintos
-  ordenados salvo el mayor, usando `t = v_i`; el atributo puede reutilizarse en
-  descendientes. Cada corte se aprende solo con los casos de entrenamiento del nodo.
-- Se selecciona la partición con mayor Gain Ratio. Los empates exactos conservan
-  el primer atributo por orden de columnas y el menor corte numérico.
-- La prepoda compara la ganancia de información con `threshold`, en bits, usando
-  estrictamente `<`. El valor inicial `0.0` es una elección del proyecto y permite
-  divisiones con ganancia cero. Para cambiarlo, modificar `THRESHOLD` y reentrenar.
-- Se crea una hoja ante clase pura, atributos agotados, falta de particiones válidas
-  o ganancia inferior al umbral. Las hojas impuras usan la mayoría local; un empate
-  de clases se resuelve por primera aparición global en entrenamiento (`classes_`).
-- Ante una categoría sin rama en predicción se devuelve la mayoría del nodo
-  alcanzado. C4.5 admite faltantes en atributos mediante pesos fraccionarios;
-  se rechazan etiquetas faltantes, infinitos y complejos.
-
-Esta es una implementación didáctica **basada en C4.5**, no una reproducción de
-todas las heurísticas del sistema original. La pospoda, la visualización, los
-controles interactivos y los experimentos con selección automática de parámetros
-siguen pendientes; HU-07 solo agrega controles programáticos de crecimiento. `fit(X, y)` es la organización interna del árbol; no se exige
-un contrato común adicional con RF. C4.5 agrega `predict_proba(X)` como
-capacidad propia, sin modificar el contrato compartido `predict(X)`.
-
-La ejecución verifica el ejemplo de 15 casos de la filmina 27 contra cálculos
-manuales, un corte numérico conocido, la prepoda y la reutilización de atributos.
-También entrena sobre Contact Lenses, Iris y Statlog Heart y verifica el contrato.
-Las accuracies de entrenamiento y prueba son resultados base, no un umbral de
-aceptación ni una búsqueda de parámetros. Las futuras exploraciones deben usar
-validación dentro de entrenamiento y reservar test para la evaluación final.
-
-Pruebas adicionales del mismo código del notebook (sin una segunda implementación):
-
-```sh
-uv run python -m unittest discover -s tests -p 'test_c45*.py' -v
-```
-
-Se comprueban cálculos manuales, ramas categóricas, cortes y sus límites,
-atributos constantes, empates, categorías nuevas, datos mixtos, prepoda,
-controles de profundidad, masa y Gain Ratio (HU-07), entradas inválidas,
-índices y ausencia de modificaciones en los datos.
-
-## HU-08: faltantes y probabilidades en C4.5
-
-`ArbolC45` admite `None`, `NaN`, `pd.NA` y `NaT` en atributos de entrenamiento
-y predicción, manteniendo el objetivo sin nulos. No imputa: ajusta Gain Ratio
-por la masa conocida, distribuye faltantes con pesos fraccionarios y mezcla
-las distribuciones de las ramas al predecir.
-
-`predict_proba(X)` devuelve un DataFrame con una columna por clase en el orden de
-`classes_` (primera aparición en `fit`) y conserva exactamente índice y orden.
-`predict(X)` devuelve su argmax como columna `prediccion`; los empates usan ese
-orden global. Una categoría nueva conserva la respuesta de mayoría local,
-obtenida de la distribución del nodo alcanzado. El desempate global reemplaza
-el desempate local anterior y puede modificar respuestas en hojas empatadas.
-
-Las probabilidades son frecuencias ponderadas, sin calibración. Los pesos de
-los hijos conservan la masa por clase del padre. Un atributo totalmente vacío
-no divide; si no hay particiones válidas se usa una hoja con las frecuencias
-locales. Para muchos nulos conviene prepoda positiva porque el reparto puede
-multiplicar las filas representadas.
-
-Las fórmulas, decisiones, recomendaciones y ejemplo manual están en
-[docs/hu08_decisiones.md](docs/hu08_decisiones.md). El notebook incluye una
-demostración reproducible sobre los tres datasets con nulos en entrenamiento
-y test. RF conserva su contrato de entrada sin faltantes; HU-12 deberá definir
-su política de faltantes antes de comparar los modelos en esos escenarios.
-
-## HU-07: controles de crecimiento en C4.5
-
-`ArbolC45(threshold=0.0, max_depth=None, min_samples_split=2, min_gain_ratio=0.0)`
-mantiene la ganancia en bits como `threshold` y agrega tres controles de prepoda
-que se aplican mientras el árbol crece. No se implementa pospoda.
-
-- `max_depth=None` no limita la profundidad. La raíz está en 0 y un nodo en
-  `profundidad >= max_depth` queda como hoja con sus conteos ponderados.
-- `min_samples_split=2` compara la **masa efectiva** `sum(weights)`, no la cantidad
-  de filas: las copias fraccionarias de HU-08 no inflan la evidencia. La igualdad
-  permite dividir.
-- `min_gain_ratio=0` compara el Gain Ratio adimensional del mejor candidato. Es
-  independiente de `threshold` (bits): ambos deben pasar y la igualdad permite
-  dividir.
-
-`ArbolC45(0.05)` sigue funcionando porque `threshold` conserva la primera posición.
-Los controles se validan en el constructor y en `fit`; se excluyen `bool`, los
-valores no finitos y los dominios inválidos. Las hojas conservan la distribución
-ponderada, la política de clase y la inferencia probabilística con faltantes.
-
-Ejemplo:
-
-```python
-arbol = ArbolC45(max_depth=3, min_samples_split=5, min_gain_ratio=0.05)
-arbol.fit(X_train, y_train)
-```
-
-La sección 10 del notebook compara configuraciones y verifica la profundidad y la
-cantidad de hojas de forma recursiva sobre un fixture pequeño. Las decisiones y
-los límites están en [docs/hu07_decisiones.md](docs/hu07_decisiones.md); las
-pruebas específicas, en `tests/test_c45_hu07.py`. RF y la carga de datasets no
-cambian.
-
-## Ejecutar Random Forest
-
-Después de preparar el entorno local, abrir:
-
-```sh
-uv run jupyter lab notebooks/02_random_forest.ipynb
-```
-
-Reiniciar el kernel y ejecutar todas las celdas en orden. El notebook encuentra
-`data/raw` desde la raíz del repositorio o desde `notebooks/`. En Colab, clonar el
-repositorio completo, instalar `requirements.txt` y situar el directorio de trabajo
-en la raíz del repositorio antes de ejecutar las celdas; subir solo el notebook no
-incluye los archivos de datos.
-
-La ejecución muestra tamaños y clases de las particiones, ejemplos de respuestas
-reales junto con predicciones, y accuracy de prueba para los tres datasets. También
-verifica el contrato de salida, la separación de train/test y la reproducibilidad.
-Estas métricas documentan una ejecución base. El notebook 01 ya usa las mismas
-particiones para el árbol propio; la comparación experimental con distintas
-parametrizaciones se desarrollará en el notebook 03.
-
-Para ambos notebooks, una ejecución local correcta no acredita por sí sola la
-ejecución en Google Colab: esa comprobación debe hacerse también en la plataforma.
-
-## Entorno local con uv
-
-Instalar `uv` siguiendo la [guía oficial](https://docs.astral.sh/uv/getting-started/installation/).
-Desde la raíz del repositorio, sincronizar el entorno:
+Desde la raíz del proyecto:
 
 ```sh
 uv sync --locked
+uv run --locked jupyter lab
 ```
 
-`uv` crea `.venv/` y selecciona Python 3.12 según `.python-version`. Si esa versión falta,
-`uv` puede instalarla. Ejecutar JupyterLab dentro del entorno:
+Abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. Los botones permiten comparar modelos, explorar un parámetro y dibujar el árbol. La interfaz carga definiciones sin ejecutar las baterías completas de experimentos.
+
+El árbol expone `entrenar`, `predecir` y `predecir_probabilidades`, con accesos compatibles `fit`, `predict` y `predict_proba`. Los cuatro controles tienen nombres en español y conservan los equivalentes `threshold`, `max_depth`, `min_samples_split` y `min_gain_ratio`. La masa mínima puede ser fraccionaria y debe ser al menos dos. `filtro_ganancia=False` conserva el criterio inicial; al activarlo se modifica la selección de divisiones y se registra como variante experimental. No hay pospoda.
+
+El bosque expone `crear_bosque`, `entrenar_bosque` y `crear_predictor`; `crear_modelo` accede a la misma fábrica. Las políticas son `rechazar`, `imputar` (mediana y marcador categórico) e `imputar_frecuente` (mediana y moda). Experimentos e interfaz eligen explícitamente la última para Cleveland. Las transformaciones aprenden solo de entrenamiento.
+
+Las entradas son DataFrames alineados; las respuestas tienen una columna `objetivo` sin faltantes. La salida tiene una columna `prediccion` y conserva índice, duplicados y orden. Se rechazan estructuras inválidas, infinitos y complejos.
+
+## Evaluación
+
+La referencia usa partición estratificada 80/20 y semilla 42. La selección reserva validación dentro del entrenamiento y deja prueba para la evaluación final. La batería de faltantes compara 0 %, 5 %, 15 % y 30 % adicionales con tres máscaras compartidas. En Cleveland, el 0 % adicional conserva las ausencias naturales. Se registran fracción nominal y observada.
+
+Los barridos varían cuatro controles de crecimiento y el filtro del árbol; y cantidad de árboles, atributos candidatos, profundidad, criterio y bootstrap del bosque. Se utilizan los tres conjuntos y tres semillas de partición. Las curvas de entrenamiento y prueba son descriptivas y no seleccionan parámetros. No se presenta el mejor resultado observado en prueba como una estimación independiente.
+
+Se calculan Accuracy, Precision, Recall y F1; las últimas tres con promedios macro y ponderados. Se guardan matrices, orden de clases, parámetros efectivos, versiones, índices y semillas. Se miden entrenamiento e inferencia por separado, excluyendo métricas y gráficos. Las matrices de distintas repeticiones se alinean por clase antes de sumarlas.
+
+## Resultados e informe
+
+Ejecutar completo `03_experimentos.ipynb` exporta las tablas y figuras a `paper/`. La ejecución puede tardar varios minutos. También puede utilizarse:
 
 ```sh
-uv run jupyter lab notebooks/04_interfaz.ipynb
+uv run --locked python paper/generar_resultados.py
+uv run --locked python paper/build.py
 ```
 
-Para regenerar el archivo de dependencias usado por Colab después de cambiar dependencias:
+El primer comando ejecuta el código real del notebook y genera `resultados.json`, tablas LaTeX y figuras PDF. No mantiene una segunda batería ni conserva cifras históricas. El segundo compila el informe con Tectonic en una carpeta temporal y comprueba el límite de doce páginas. Para actualizar únicamente las observaciones textuales tras ejecutar el notebook, usar `python paper/actualizar_informe.py` con el entorno preparado.
+
+## Pruebas
 
 ```sh
-uv export --format requirements.txt --no-dev --output-file requirements.txt
+uv run --locked python -X utf8 -m unittest discover -s tests -v
 ```
 
-Editar dependencias en `pyproject.toml` con `uv add`; no editar `uv.lock` ni el `requirements.txt`
-exportado manualmente.
+La primera compilación puede descargar los paquetes TeX. UTF-8 evita depender de la página de códigos de Windows. Las pruebas accionan los botones de la interfaz; no reemplazan una revisión visual en navegador.
 
-## Paper LNCS
+## Google Colab y pendientes
 
-La carpeta `paper/` contiene la clase y el estilo bibliográfico del
-[paquete oficial Springer LNCS](https://www.springer.com/gp/computer-science/lncs/conference-proceedings-guidelines).
-El archivo `.tex` deja preparada la estructura del informe, pero todavía no contiene la redacción.
+En Colab, abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. La primera celda descarga el repositorio si falta. Se utilizan las bibliotecas de Colab: no se instala `requirements.txt` completo sobre sus paquetes administrados. Ese archivo se conserva como exportación del entorno local definido en `pyproject.toml` y `uv.lock`.
 
-Compilar desde la raíz del repositorio:
-
-```sh
-uv run python paper/build.py
-```
-
-La salida es `paper/Paper_Equipo-QG_TP_IA.pdf`. La primera compilación necesita conexión a
-Internet para obtener los recursos TeX que Tectonic no tenga en caché. El script compila en un
-directorio temporal, sin reutilizar auxiliares LaTeX anteriores, y comprueba el límite de 12 páginas.
-El ejecutable se instala mediante [`tecto`](https://pypi.org/project/tecto/), un empaquetado
-de terceros de los binarios oficiales de Tectonic.
-
-Verificar compilación, referencias, límite de páginas y preservación de auxiliares previos:
-
-```sh
-uv run python -m unittest discover -s tests -v
-```
-
-## Google Colab
-
-Con el repositorio disponible en el entorno de Colab, ejecutar desde su raíz:
-
-```python
-%pip install -r requirements.txt
-```
-
-Luego abrir `notebooks/04_interfaz.ipynb`. Colab aporta el entorno Jupyter; `requirements.txt`
-instala las dependencias de los notebooks y se genera desde `uv.lock`.
-
-## Entregables y fechas
-
-- Código fuente documentado que corra en Google Colab.
-- Informe LNCS de Springer de hasta 12 carillas: introducción, descripción de algoritmos,
-  solución implementada, simulaciones y resultados, conclusiones y referencias.
-- Tablero Trello con seguimiento de tareas.
-- **Fecha límite:** 11/11/2026 a las 23:59; hasta el 18/11/2026 sin recuperatorio.
-- Coloquio grupal a convenir.
+La versión integrada debe comprobarse todavía en una sesión limpia de Colab. Quedan por confirmar los datos personales de la portada y la revisión editorial final. La pospoda, más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.
