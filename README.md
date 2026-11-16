@@ -4,6 +4,10 @@ Trabajo práctico de Inteligencia Artificial, ciclo 2026. Integrantes: Franco Sa
 
 El proyecto compara un árbol propio basado en C4.5 con Random Forest de scikit-learn. Los notebooks explican sus fórmulas, decisiones, parámetros y contratos.
 
+[Abrir el TP de Inteligencia Artificial en Google Colab](https://colab.research.google.com/github/marianoInsa/Decision-Tree-vs-Random-Forest/blob/main/notebooks/04_interfaz.ipynb)
+
+En Colab, seleccionar **Entorno de ejecución → Ejecutar todo**. Cuando aparezca la interfaz, usar las pestañas para comparar los modelos, variar un parámetro o dibujar el árbol.
+
 | Archivo | Contenido |
 |---|---|
 | `01_decision_tree_c45.ipynb` | Definiciones del árbol: categorías, números, faltantes, prepoda y filtro opcional. |
@@ -75,8 +79,10 @@ uv run --locked python -X utf8 -m unittest discover -s tests -v
 
 La primera compilación puede descargar los paquetes TeX. UTF-8 evita depender de la página de códigos de Windows. Las pruebas accionan los botones de la interfaz; no reemplazan una revisión visual en navegador.
 
-## Google Colab y pendientes
+## Google Colab
 
-En Colab, abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. La primera celda descarga el repositorio si falta. Se utilizan las bibliotecas de Colab: no se instala `requirements.txt` completo sobre sus paquetes administrados. Ese archivo se conserva como exportación del entorno local definido en `pyproject.toml` y `uv.lock`.
+La primera celda de `04_interfaz.ipynb` descarga el repositorio si falta. El notebook utiliza las bibliotecas del entorno de Colab. El archivo `requirements.txt` se conserva como exportación del entorno local definido en `pyproject.toml` y `uv.lock`.
 
-La versión integrada debe comprobarse todavía en una sesión limpia de Colab. Quedan por confirmar los datos personales de la portada y la revisión editorial final. Más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.
+## Pendientes
+
+Quedan por confirmar los datos personales de la portada y la revisión editorial final. Más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.
