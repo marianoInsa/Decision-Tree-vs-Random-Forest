@@ -38,7 +38,7 @@ class PaperBuildTest(unittest.TestCase):
         self.assertIn("Breiman", text)
         self.assertIn("scikit-learn", text)
         authors_and_legajos = (
-            ("Laura Cornaló Bassan", "00000"),
+            ("Laura Cornaló Bassan", "23354"),
             ("Matías Fernandez", "24282"),
             ("Mariano Insaurralde", "24684"),
             ("Philippe Maurel", "25613"),

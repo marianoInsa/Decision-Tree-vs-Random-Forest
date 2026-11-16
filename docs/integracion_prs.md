@@ -15,7 +15,7 @@ Se descarta la referencia de Quinlan añadida de memoria: el filtro se describe 
 
 La selección de configuraciones finales conserva validación interna. Los barridos de entrenamiento y prueba se presentan como descripciones de sensibilidad, sin elegir el mejor resultado de prueba como si fuera una estimación independiente. En Cleveland, cero por ciento de ausencias adicionales conserva las seis celdas naturales vacías; el porcentaje observado incluye ambas fuentes de ausencia.
 
-Las comprobaciones locales abarcan contratos, parámetros, pesos, filtro, imputación, carga de Cleveland, botones, alineación de matrices, resultados exportados y compilación del informe. Queda pendiente ejecutar esta versión exacta en una sesión limpia de Colab. También deben confirmarse los datos personales pendientes de la portada y realizarse la revisión editorial final. El cierre de los PR indica incorporación o reemplazo de sus aportes, no una certificación de esos controles pendientes.
+Las comprobaciones locales abarcan contratos, parámetros, pesos, filtro, imputación, carga de Cleveland, botones, alineación de matrices, resultados exportados y compilación del informe. Queda pendiente ejecutar esta versión exacta en una sesión limpia de Colab. También debe realizarse la revisión editorial final de la portada. El cierre de los PR indica incorporación o reemplazo de sus aportes, no una certificación de esos controles pendientes.
 
 Validación local final: 94 pruebas aprobadas, cuatro notebooks ejecutados en kernels nuevos e informe de diez páginas compilado y revisado visualmente. El entorno y las semillas se registran en la exportación de resultados.
 

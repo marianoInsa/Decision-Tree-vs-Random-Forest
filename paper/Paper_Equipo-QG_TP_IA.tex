@@ -34,7 +34,7 @@
 \title{Comparativa del rendimiento de un árbol de decisión C4.5 propio vs. el modelo de ensamble Random Forest en problemas de clasificación}
 \titlerunning{C4.5 y Random Forest}
 
-\author{Laura Cornaló Bassan\inst{1}\textsuperscript{[00000]} \and
+\author{Laura Cornaló Bassan\inst{1}\textsuperscript{[23354]} \and
 Matías Fernandez\inst{1}\textsuperscript{[24282]} \and
 Mariano Insaurralde\inst{1}\textsuperscript{[24684]} \and
 Philippe Maurel\inst{1}\textsuperscript{[25613]} \and
@@ -43,7 +43,8 @@ Franco Sanchez\inst{1}\textsuperscript{[27310]}}
 
 \institute{Universidad Tecnológica Nacional, Facultad Regional de Resistencia\\
 Ingeniería en Sistemas de Información\\
-\email{\{correo1,correo2,correo3,correo4,francodamiansanchez10\}@gmail.com}}
+\email{lauricornalo@gmail.com, matiasafernandez23@gmail.com, marianoinsaurralde5@gmail.com,
+philippedamau@gmail.com, francodamiansanchez10@gmail.com}}
 
 \maketitle
 
@@ -58,7 +59,7 @@ Un clasificador automático asigna una clase a cada caso a partir de sus caracte
 
 Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
 
-Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos.
+Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos. El código fuente y los resultados reproducibles están disponibles en el repositorio del trabajo \cite{repositorio2026}.
 
 El documento describe primero los fundamentos de ambos modelos, luego la implementación, después los experimentos y cierra con las conclusiones.
 
@@ -197,6 +198,6 @@ Los resultados corresponden a un problema pequeño y a las particiones medidas; 
 
 Aunque el árbol incorpora pospoda pesimista opcional, la evaluación experimental la mantuvo desactivada por defecto; su estudio comparativo sistemático, una validación cruzada más extensa y las mediciones de tiempo en condiciones controladas quedan como trabajo futuro.
 
-\bibliographystyle{splncs04}
+\bibliographystyle{splncs04-appearance}
 \bibliography{refs}
 \end{document}

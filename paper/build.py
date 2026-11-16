@@ -13,6 +13,7 @@ INPUT_FILES = (
     SOURCE_NAME,
     "llncs.cls",
     "splncs04.bst",
+    "splncs04-appearance.bst",
     "refs.bib",
     "tablas_resultados.tex",
     "observaciones_resultados.tex",
