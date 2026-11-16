@@ -18,3 +18,11 @@ La selección de configuraciones finales conserva validación interna. Los barri
 Las comprobaciones locales abarcan contratos, parámetros, pesos, filtro, imputación, carga de Cleveland, botones, alineación de matrices, resultados exportados y compilación del informe. Queda pendiente ejecutar esta versión exacta en una sesión limpia de Colab. También deben confirmarse los datos personales pendientes de la portada y realizarse la revisión editorial final. El cierre de los PR indica incorporación o reemplazo de sus aportes, no una certificación de esos controles pendientes.
 
 Validación local final: 94 pruebas aprobadas, cuatro notebooks ejecutados en kernels nuevos e informe de diez páginas compilado y revisado visualmente. El entorno y las semillas se registran en la exportación de resultados.
+
+## Integración de PR #14 y reenfoque en Heart Disease
+
+PR #14 se integró primero en `main` con un commit de merge, porque su base era el `main` vigente y no tenía conflictos. Después, la rama `informe-heart-disease` absorbió `main` y resolvió el conflicto del informe.
+
+La resolución conserva el reenfoque local en Heart Disease y las correcciones de PR #14: el correo de portada y la descripción de la pospoda como opcional y desactivada por defecto. No se restauran Lenses, Iris ni la tabla de decisiones eliminada por el recorte. El PDF no se fusiona como binario: se recompila con `paper/build.py` después de resolver el texto.
+
+Las puertas de validación son la suite completa, `paper/build.py`, la ausencia de `TODO` y de referencias colgadas, y la revisión visual del PDF. La ficha `docs/hu17_revision_informe.md` conserva las cifras de la revisión original y lleva una nota de alcance posterior.

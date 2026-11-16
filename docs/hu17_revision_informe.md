@@ -34,3 +34,7 @@ Siguen abiertos como tareas de cierre editorial/operativo del equipo:
 - Eventual aplicación en las secciones 2.1 y 3.1 de las observaciones **C1–C3** documentadas en `docs/revision_tecnica_informe_HU18.md`.
 - Confirmación de datos personales de portada (legajo pendiente en `Paper_Equipo-QG_TP_IA.tex` y `tests/test_paper_build.py`).
 - Ejecución completa en sesión limpia de Google Colab según `docs/integracion_prs.md`.
+
+## 5. Nota de alcance posterior
+
+Con posterioridad a esta revisión, el informe se reenfocó en Heart Disease. Se retiraron Lenses e Iris de las tablas, las observaciones y las conclusiones, y se regeneraron los resultados, las figuras y el PDF. Las cifras de las secciones 2 y 3 corresponden a la versión revisada en HU-17 y se conservan como registro histórico. La corrección sobre pospoda se mantiene en las secciones 2.1 y 6.
