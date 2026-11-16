@@ -36,6 +36,8 @@ uv run --locked jupyter lab
 
 Abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. Los botones permiten comparar modelos, explorar un parámetro y dibujar el árbol. La interfaz carga definiciones sin ejecutar las baterías completas de experimentos.
 
+Para dibujar el árbol en Jupyter local, instalar [Graphviz](https://graphviz.org/download/), agregar su carpeta de ejecutables al `PATH` y reiniciar Jupyter. Se puede verificar la instalación con `dot -V`. En Colab, el botón instala Graphviz si el entorno aún no lo incluye.
+
 El árbol expone `entrenar`, `predecir` y `predecir_probabilidades`, con accesos compatibles `fit`, `predict` y `predict_proba`. Los cuatro controles tienen nombres en español y conservan los equivalentes `threshold`, `max_depth`, `min_samples_split` y `min_gain_ratio`. La masa mínima puede ser fraccionaria y debe ser al menos dos. `filtro_ganancia=False` conserva el criterio inicial; al activarlo se modifica la selección de divisiones y se registra como variante experimental. No hay pospoda.
 
 El bosque expone `crear_bosque`, `entrenar_bosque` y `crear_predictor`; `crear_modelo` accede a la misma fábrica. Las políticas son `rechazar`, `imputar` (mediana y marcador categórico) e `imputar_frecuente` (mediana y moda). Experimentos e interfaz eligen explícitamente la última para Cleveland. Las transformaciones aprenden solo de entrenamiento.
