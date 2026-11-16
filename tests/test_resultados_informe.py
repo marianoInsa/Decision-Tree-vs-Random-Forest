@@ -40,10 +40,14 @@ class TestResultadosInforme(unittest.TestCase):
     def test_las_cifras_de_la_tabla_corresponden_a_los_resultados(self):
         tabla = (RAIZ / "paper/tablas_resultados.tex").read_text(encoding="utf-8")
         for fila in self.resultados["finales"]:
-            if fila["conjunto"] == "prueba":
-                nombre = {"heart": "Cleveland", "iris": "Iris", "lenses": "Lenses"}[fila["dataset"]]
-                fragmento = f"{nombre} & {fila['modelo']} & {fila['accuracy']:.3f} & {fila['f1_macro']:.3f}"
+            if fila["conjunto"] == "prueba" and fila["dataset"] == "heart":
+                fragmento = f"{fila['modelo']} & {fila['accuracy']:.3f} & {fila['f1_macro']:.3f}"
                 self.assertIn(fragmento, tabla)
+        observaciones = (RAIZ / "paper/observaciones_resultados.tex").read_text(encoding="utf-8")
+        for texto in (tabla, observaciones):
+            self.assertNotIn("Iris", texto)
+            self.assertNotIn("Lenses", texto)
+            self.assertNotIn("Cleveland", texto)
 
 
 if __name__ == "__main__":
