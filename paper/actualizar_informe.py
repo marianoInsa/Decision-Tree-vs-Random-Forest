@@ -9,16 +9,16 @@ def actualizar_observaciones():
     resultados = json.loads((carpeta / "resultados.json").read_text(encoding="utf-8"))
     texto = []
     observaciones_finales = []
-    for nombre, etiqueta in (("lenses", "Lenses"), ("iris", "Iris"), ("heart", "Cleveland")):
+    for nombre, etiqueta in (("heart", "Heart Disease"),):
         filas = {fila["modelo"]: fila for fila in resultados["finales"]
                  if fila["dataset"] == nombre and fila["conjunto"] == "prueba"}
         observaciones_finales.append(f"En {etiqueta}, el F1 macro final es "
             f"{filas['C4.5']['f1_macro']:.3f} para C4.5 y {filas['Random Forest']['f1_macro']:.3f} para Random Forest.")
-    observaciones_finales.append("Estas cifras corresponden a la selección interna por validación; no al máximo de los barridos de prueba.")
+    observaciones_finales.append("Estas cifras corresponden a la selección interna por validación, no al máximo de los barridos de prueba.")
     texto.append(" ".join(observaciones_finales))
     observaciones_nulos = []
-    for nombre in ("lenses", "iris", "heart"):
-        etiquetas = {"lenses": "Lenses", "iris": "Iris", "heart": "Cleveland"}
+    for nombre in ("heart",):
+        etiquetas = {"heart": "Heart Disease"}
         partes = []
         for modelo in ("C4.5", "Random Forest"):
             filas = [fila for fila in resultados["faltantes"] if fila["dataset"] == nombre
@@ -35,7 +35,7 @@ def actualizar_observaciones():
              and fila["conjunto"] == "prueba"]
     sin_filtro = next(fila for fila in filas if fila["valor_parametro"] == "false")
     con_filtro = next(fila for fila in filas if fila["valor_parametro"] == "true")
-    texto.append(f"En el barrido descriptivo de Cleveland, el árbol sin filtro obtiene "
+    texto.append(f"En el barrido descriptivo de Heart Disease, el árbol sin filtro obtiene "
         f"{sin_filtro['accuracy_media']:.3f} de tasa de acierto media, con desvío {sin_filtro['accuracy_desvio']:.3f}; "
         f"con filtro obtiene {con_filtro['accuracy_media']:.3f}, con desvío {con_filtro['accuracy_desvio']:.3f}. "
         "Se informa la variante sin activarla por defecto. Ambas condiciones conservan los demás parámetros y las particiones. "
