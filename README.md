@@ -38,7 +38,11 @@ Abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. Los botones permiten comp
 
 Para dibujar el árbol en Jupyter local, instalar [Graphviz](https://graphviz.org/download/), agregar su carpeta de ejecutables al `PATH` y reiniciar Jupyter. Se puede verificar la instalación con `dot -V`. En Colab, el botón instala Graphviz si el entorno aún no lo incluye.
 
-El árbol expone `entrenar`, `predecir` y `predecir_probabilidades`, con accesos compatibles `fit`, `predict` y `predict_proba`. Los cuatro controles tienen nombres en español y conservan los equivalentes `threshold`, `max_depth`, `min_samples_split` y `min_gain_ratio`. La masa mínima puede ser fraccionaria y debe ser al menos dos. `filtro_ganancia=False` conserva el criterio inicial; al activarlo se modifica la selección de divisiones y se registra como variante experimental. No hay pospoda.
+El árbol expone `entrenar`, `predecir` y `predecir_probabilidades`, con accesos compatibles `fit`, `predict` y `predict_proba`. Los cuatro controles tienen nombres en español y conservan los equivalentes `threshold`, `max_depth`, `min_samples_split` y `min_gain_ratio`. La masa mínima puede ser fraccionaria y debe ser al menos dos. `filtro_ganancia=False` conserva el criterio inicial. Al activarlo se modifica la selección de divisiones y se registra como variante experimental.
+
+La pospoda está desactivada por defecto. Con `ArbolC45(pospoda=True)`, el árbol revisa su estructura de abajo hacia arriba después de entrenarse. Sustituye un subárbol por una hoja si su error estimado es igual o menor, con un factor de confianza fijo de 0,25. Usa solo los pesos y las clases del entrenamiento y conserva la distribución del nodo al convertirlo en hoja. Los resultados del informe corresponden a configuraciones sin pospoda.
+
+En `04_interfaz.ipynb`, la casilla **Activar pospoda** se aplica a la comparación con Random Forest y al dibujo del árbol. Para comparar las dos variantes de C4.5 sobre las mismas particiones, usar **Variar un parámetro**, seleccionar **C4.5 → Pospoda** y ejecutar con `0, 1`. La tabla muestra la tasa de acierto y F1 macro en entrenamiento y prueba. Para inspeccionar el tamaño del árbol, usar **Ver el árbol** con cada estado de la casilla y conservar la semilla y la proporción de prueba.
 
 El bosque expone `crear_bosque`, `entrenar_bosque` y `crear_predictor`; `crear_modelo` accede a la misma fábrica. Las políticas son `rechazar`, `imputar` (mediana y marcador categórico) e `imputar_frecuente` (mediana y moda). Experimentos e interfaz eligen explícitamente la última para Cleveland. Las transformaciones aprenden solo de entrenamiento.
 
@@ -75,4 +79,4 @@ La primera compilación puede descargar los paquetes TeX. UTF-8 evita depender d
 
 En Colab, abrir `04_interfaz.ipynb` y ejecutar todas sus celdas. La primera celda descarga el repositorio si falta. Se utilizan las bibliotecas de Colab: no se instala `requirements.txt` completo sobre sus paquetes administrados. Ese archivo se conserva como exportación del entorno local definido en `pyproject.toml` y `uv.lock`.
 
-La versión integrada debe comprobarse todavía en una sesión limpia de Colab. Quedan por confirmar los datos personales de la portada y la revisión editorial final. La pospoda, más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.
+La versión integrada debe comprobarse todavía en una sesión limpia de Colab. Quedan por confirmar los datos personales de la portada y la revisión editorial final. Más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.

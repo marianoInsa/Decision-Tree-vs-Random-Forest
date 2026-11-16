@@ -15,6 +15,34 @@ objetivo = base.objetivo
 modulo = base.modulo
 
 
+class TestPospoda(unittest.TestCase):
+    def test_poda_division_sin_separacion_y_conserva_probabilidades(self):
+        atributos = pd.DataFrame({"grupo": ["a"] * 4 + ["b"] * 4 + [None]})
+        clases = objetivo(["A", "A", "A", "B"] * 2 + ["A"])
+        inicial = ArbolC45().entrenar(atributos, clases)
+        self.assertFalse(inicial.raiz_.es_hoja)
+        self.assertEqual(inicial.raiz_.hijos["a"].peso_total, 4.5)
+
+        podado = ArbolC45(pospoda=True).entrenar(atributos, clases)
+        self.assertEqual(podado.raiz_.motivo_parada, "pospoda")
+        self.assertTrue(podado.raiz_.es_hoja)
+        self.assertEqual(podado.raiz_.conteos, inicial.raiz_.conteos)
+        probabilidades = podado.predecir_probabilidades(
+            pd.DataFrame({"grupo": [None, "a", "nueva"]}))
+        for a, b in probabilidades.itertuples(index=False, name=None):
+            self.assertAlmostEqual(a, 7 / 9)
+            self.assertAlmostEqual(b, 2 / 9)
+
+    def test_conserva_una_division_predictiva(self):
+        atributos = pd.DataFrame({"medida": [1] * 5 + [2] * 5 + [None]})
+        clases = objetivo(["A"] * 5 + ["B"] * 5 + ["A"])
+        podado = ArbolC45(pospoda=True).entrenar(atributos, clases)
+        self.assertFalse(podado.raiz_.es_hoja)
+        self.assertEqual(
+            podado.predecir(pd.DataFrame({"medida": [1, 2]}))["prediccion"].tolist(),
+            ["A", "B"])
+
+
 class TestMetricasConNulos(unittest.TestCase):
     def test_entropia_con_pesos_fraccionarios(self):
         # Masas A=1, B=3: H=0.811278..., no H de las tres filas.

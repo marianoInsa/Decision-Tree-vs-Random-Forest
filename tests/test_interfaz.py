@@ -3,8 +3,10 @@
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import matplotlib
+import pandas as pd
 
 matplotlib.use("Agg")
 
@@ -35,6 +37,22 @@ class TestInterfaz(unittest.TestCase):
         curvas = espacio["barrer"]("iris", "C4.5", "max_depth", [1, 3], C45, RF, repeticiones=2)
         self.assertEqual(len(curvas), 4)
         self.assertEqual(set(curvas["valor"]), {1, 3})
+
+    def test_comparar_pospoda_desde_el_boton(self):
+        interfaz = espacio["crear_interfaz"]()
+        c = interfaz.controles
+        self.assertFalse(c.c45_pospoda.value)
+        c.repeticiones.value = 1
+        c.barrido_parametro.value = "pospoda"
+        self.assertEqual(c.barrido_valores.value, "0, 1")
+        salidas = []
+        with patch.dict(espacio, display=salidas.append):
+            interfaz.botones["barrer"].click()
+        self.assertIn("Listo", interfaz.estado.value)
+        tabla, = [salida for salida in salidas if isinstance(salida, pd.DataFrame)]
+        self.assertEqual(list(tabla.index), ["Sin pospoda", "Con pospoda"])
+        self.assertIn(("F1 macro", "Prueba"), tabla.columns)
+        self.assertIn(("Tasa de acierto", "Entrenamiento"), tabla.columns)
 
     def test_arbol_dot_respeta_la_profundidad(self):
         arbol = espacio["entrenar_arbol"]("heart", {"max_depth": 4})
@@ -68,6 +86,7 @@ class TestInterfaz(unittest.TestCase):
         interfaz = espacio["crear_interfaz"]()
         controles = interfaz.controles
         controles.dataset.value = "heart"
+        controles.c45_pospoda.value = True
         controles.usar_validada.click()
         self.assertIn("validación cargados", interfaz.estado.value)
         resultados = json.loads((RAIZ / "paper/resultados.json").read_text(encoding="utf-8"))
@@ -75,6 +94,7 @@ class TestInterfaz(unittest.TestCase):
                     if fila["dataset"] == "heart" and fila["conjunto"] == "prueba"}
         self.assertEqual(controles.rf_arboles.value, elegidos["Random Forest"]["numero_arboles"])
         self.assertEqual(controles.c45_filtro.value, elegidos["C4.5"]["filtro_ganancia"])
+        self.assertEqual(controles.c45_pospoda.value, elegidos["C4.5"].get("pospoda", False))
         self.assertEqual(controles.c45_limite.value, elegidos["C4.5"]["profundidad_maxima"] is not None)
 
     def test_rechaza_repeticiones_y_particiones_invalidas(self):
