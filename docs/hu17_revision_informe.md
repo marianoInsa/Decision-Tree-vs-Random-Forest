@@ -32,7 +32,7 @@ El informe afirmaba en cuatro puntos (líneas 101, 154, 167 y 223 del `.tex`) qu
 
 Siguen abiertos como tareas de cierre editorial/operativo del equipo:
 - Eventual aplicación en las secciones 2.1 y 3.1 de las observaciones **C1–C3** documentadas en `docs/revision_tecnica_informe_HU18.md`.
-- Confirmación de datos personales de portada (legajo pendiente en `Paper_Equipo-QG_TP_IA.tex` y `tests/test_paper_build.py`).
+- Datos personales de portada: correos y legajo incorporados; resta la revisión editorial final.
 - Ejecución completa en sesión limpia de Google Colab según `docs/integracion_prs.md`.
 
 ## 5. Nota de alcance posterior
