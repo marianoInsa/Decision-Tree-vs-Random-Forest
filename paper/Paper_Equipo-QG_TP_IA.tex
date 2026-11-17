@@ -64,7 +64,7 @@ El documento describe primero los fundamentos de ambos modelos, luego la impleme
 
 \subsection{Árboles de decisión y C4.5}
 
-C4.5 construye un árbol de decisión de forma recursiva \cite{liu2011}. En cada nodo elige la pregunta sobre un atributo que mejor separa las clases y repite el procedimiento en los subconjuntos resultantes. La entropía mide la impureza de un nodo a partir de la distribución de sus clases. Si $D$ es el conjunto de casos, $C$ el conjunto de clases y $p_c$ la proporción de casos de la clase $c$, medida por masa cuando los pesos no son unitarios, la entropía se define en la ecuación~\eqref{eq:entropia}:
+C4.5 construye un árbol de decisión de forma recursiva \cite{liu2011}. En cada nodo elige la pregunta sobre un atributo que mejor separa las clases y repite el procedimiento en los subconjuntos resultantes. Para comparar esas preguntas, primero se necesita conocer la distribución de las clases entre los casos que llegan al nodo. Cada caso participa con un peso que inicialmente vale uno, pero puede fraccionarse cuando un valor faltante obliga a repartirlo entre varias ramas \cite{liu2011}. La suma de esos pesos constituye la masa del nodo; por tanto, la proporción de una clase se obtiene dividiendo la masa de sus casos por la masa total. A partir de estas proporciones, la entropía mide el grado de mezcla de las clases, también denominado impureza. Si $D$ es el conjunto de casos, $C$ el conjunto de clases y $p_c$ la proporción de la clase $c$ calculada de ese modo, la entropía se define en la ecuación~\eqref{eq:entropia}:
 \begin{equation}
 H(D) = -\sum_{c \in C} p_c \log_2 p_c.
 \label{eq:entropia}
@@ -101,15 +101,15 @@ Un árbol que crece sin restricciones puede ajustarse a rasgos particulares del 
 
 Random Forest combina $B$ árboles de decisión construidos con perturbaciones aleatorias \cite{breiman2001}. Cada árbol se entrena con una muestra del mismo tamaño que el conjunto original, obtenida con reemplazo, y en cada división evalúa solo un subconjunto aleatorio de los atributos disponibles. Los árboles crecen sin poda y la predicción combina sus respuestas por voto mayoritario o por promedio de probabilidades. Esa doble fuente de aleatoriedad reduce la dependencia de una sola estructura y la correlación entre los árboles.
 
-Breiman muestra que el error de generalización depende de la fuerza de los árboles y de su correlación: árboles fuertes y poco correlacionados tienden a reducir el error \cite{breiman2001}.
+Para entender el efecto de esa aleatoriedad, Breiman relaciona el error sobre casos nuevos con la calidad de los votos y la dependencia entre los árboles \cite{breiman2001}. La calidad se expresa mediante la fuerza del conjunto: la ventaja media de la proporción de votos de la clase correcta sobre la de la clase incorrecta más votada. A su vez, en un problema de dos clases como el de este trabajo, la correlación refleja hasta qué punto los árboles tienden a acertar o equivocarse sobre los mismos casos. Por ello, una mayor fuerza y una menor correlación pueden favorecer la reducción del error de generalización \cite{breiman2001}.
 
 \section{Breve descripción de los algoritmos desarrollados}
 
 \subsection{C4.5}
 
-El Algoritmo~\ref{alg:c45} resume la construcción con la configuración habitual. El conjunto $\mathcal{A}$ contiene los atributos disponibles y $d$ indica la profundidad del nodo, que comienza en cero en la raíz. La masa de un nodo suma los pesos de sus casos y refleja el reparto fraccionario de los valores faltantes. Las paradas estructurales se evalúan antes de elegir la división. La ganancia y la tasa de ganancia de la división elegida deben alcanzar sus mínimos respectivos, incluida la igualdad.
+El Algoritmo~\ref{alg:c45} resume la construcción con la configuración habitual. El conjunto $\mathcal{A}$ contiene los atributos disponibles y $d$ indica la profundidad del nodo, que comienza en cero en la raíz. Con estos elementos y la masa del nodo, las paradas estructurales se evalúan antes de elegir la división. Si la construcción continúa, la ganancia y la tasa de ganancia de la división elegida deben alcanzar sus mínimos respectivos, incluida la igualdad.
 
-\begin{algorithm}[tb]
+\begin{algorithm}[!htbp]
 \caption{Construcción recursiva de un árbol C4.5}
 \label{alg:c45}
 \begin{algorithmic}[1]
@@ -150,7 +150,7 @@ La interfaz está disponible en el cuaderno de Google Colab enlazado en el repos
 
 \subsection{Datos y configuración}
 
-La evaluación que se presenta utiliza la versión procesada de Cleveland del conjunto de datos Heart Disease \cite{heartDisease}. El archivo contiene 303 casos con trece atributos y la clase. Seis atributos son numéricos (edad, presión arterial en reposo, colesterol sérico, frecuencia cardíaca máxima, depresión del segmento ST y cantidad de vasos principales, de 0 a 3) y siete son categóricos (sexo, tipo de dolor de pecho, glucemia en ayunas, electrocardiograma en reposo, angina inducida por ejercicio, pendiente del segmento ST y thal\footnote{Thal corresponde al resultado de una prueba de perfusión miocárdica con talio.}). La cantidad de vasos se conserva numérica porque el archivo la registra como un conteo.
+La evaluación que se presenta utiliza la versión procesada de Cleveland del conjunto de datos Heart Disease \cite{heartDisease}. El archivo contiene 303 casos con trece atributos y la clase. Entre las mediciones cardíacas figuran la depresión y la pendiente del segmento ST. Este segmento es una parte del trazado del electrocardiograma situada entre el final de la activación eléctrica de los ventrículos y el comienzo de la onda T, asociada con su recuperación eléctrica \cite{meek2002}. En conjunto, seis atributos son numéricos (edad, presión arterial en reposo, colesterol sérico, frecuencia cardíaca máxima, depresión del segmento ST y cantidad de vasos principales, de 0 a 3) y siete son categóricos (sexo, tipo de dolor de pecho, glucemia en ayunas, electrocardiograma en reposo, angina inducida por ejercicio, pendiente del segmento ST y thal\footnote{Thal corresponde al resultado de una prueba de perfusión miocárdica con talio.}). La cantidad de vasos se conserva numérica porque el archivo la registra como un conteo.
 
 La preparación nombra las columnas, convierte ``?'' en valor faltante y pasa a texto los siete atributos categóricos, codificados como números, para evitar un orden inexistente. No se descartan filas ni atributos, no se imputa al cargar y no se escalan los numéricos. La clase ``num'' se binariza en ausencia (cero) y presencia (uno a cuatro): quedan 164 casos de ausencia y 139 de presencia.
 
@@ -158,7 +158,9 @@ Hay seis celdas faltantes en seis casos (cuatro en la cantidad de vasos, dos en 
 
 La tasa de acierto es la proporción de predicciones correctas. Para cada clase, la precisión mide qué proporción de los casos asignados a esa clase pertenece a ella, y la exhaustividad mide qué proporción de sus casos reales identifica el modelo. El F1 combina precisión y exhaustividad mediante su media armónica, y el F1 macro da el mismo peso al F1 de cada clase. Cuando el denominador de una métrica es cero, se registra un valor de cero.
 
-Las particiones conservan aproximadamente la proporción de cada clase y se generan con la semilla 42. Se reserva el 20\% para prueba y el 25\% del bloque restante para validación, con 181 casos de ajuste, 61 de validación y 61 de prueba. Para C4.5 se comparan profundidad máxima 2 y crecimiento sin límite de profundidad, con masa mínima 2, ganancia mínima 0 y tasa de ganancia mínima 0. Para Random Forest se comparan 30 y 100 árboles, con profundidad sin límite, criterio de Gini, muestreo con reemplazo y semilla 42. La cantidad de columnas candidatas por división se configura como la raíz cuadrada del total de columnas transformadas, redondeada hacia abajo. Cada modelo se elige por el F1 macro de validación, con desempate por orden de evaluación. Luego se reentrena con los 242 casos de ajuste y validación y se evalúa en los 61 de prueba.
+Para evaluar ambos modelos bajo las mismas condiciones, las particiones conservan aproximadamente la proporción de cada clase y se generan con la semilla 42. Primero se reserva el 20\% de los casos para prueba y, del bloque restante, se destina el 25\% a validación. Así se obtienen 181 casos de ajuste, 61 de validación y 61 de prueba. Con el bloque de ajuste se entrenan dos configuraciones de C4.5: una con profundidad máxima 2 y otra sin límite de profundidad, ambas con masa mínima 2, ganancia mínima 0 y tasa de ganancia mínima 0.
+
+Para Random Forest se comparan 30 y 100 árboles, con profundidad sin límite, criterio de Gini, muestreo con reemplazo y semilla 42. El criterio de Gini mide la mezcla de clases en un nodo: vale cero cuando todos sus casos pertenecen a una misma clase y aumenta cuando las proporciones de las clases se equilibran \cite{stanfordGini}. Por ello, al comparar las divisiones candidatas se elige la que más reduce esa impureza, ponderando cada rama por la cantidad de casos que recibe. En cada división, la cantidad de columnas candidatas se configura como la raíz cuadrada del total de columnas transformadas, redondeada hacia abajo. Una vez evaluadas las configuraciones de ambos modelos, se elige la de mayor F1 macro de validación para cada uno, con desempate por orden de evaluación. Finalmente, cada modelo se reentrena con los 242 casos de ajuste y validación y se evalúa en los 61 de prueba.
 
 \subsection{Resultados}
 
@@ -176,7 +178,7 @@ La Tabla~\ref{tab:nulos} presenta los extremos y la Figura~\ref{fig:nulos} inclu
 
 \TablaFaltantes
 
-\begin{figure}[tb]
+\begin{figure}[!htbp]
 \centering\includegraphics[width=0.85\textwidth]{figuras/faltantes_resumen.pdf}
 \caption{F1 macro medio en prueba frente a ausencias adicionales. El marcador distingue el modelo.}
 \label{fig:nulos}
@@ -184,7 +186,7 @@ La Tabla~\ref{tab:nulos} presenta los extremos y la Figura~\ref{fig:nulos} inclu
 
 En los barridos se varía un parámetro por vez en tres particiones estratificadas compartidas. En Random Forest, las semillas 42, 43 y 44 cambian la partición y la aleatoriedad del modelo. La Figura~\ref{fig:barridos} muestra las medias y un desvío estándar muestral a cada lado, por profundidad en C4.5 y por cantidad de árboles en Random Forest. La selección final se basa solo en la validación interna.
 
-\begin{figure}[tb]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.48\textwidth]{figuras/profundidad_c45.pdf}\hfill
 \includegraphics[width=0.48\textwidth]{figuras/arboles_bosque.pdf}
