@@ -1,7 +1,10 @@
 """Verifica cobertura y coherencia de los resultados que alimentan el informe."""
 from pathlib import Path
 import json
+from tempfile import TemporaryDirectory
 import unittest
+
+from paper.actualizar_informe import actualizar_informe
 
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -41,13 +44,26 @@ class TestResultadosInforme(unittest.TestCase):
         tabla = (RAIZ / "paper/tablas_resultados.tex").read_text(encoding="utf-8")
         for fila in self.resultados["finales"]:
             if fila["conjunto"] == "prueba" and fila["dataset"] == "heart":
-                fragmento = f"{fila['modelo']} & {fila['accuracy']:.3f} & {fila['f1_macro']:.3f}"
-                self.assertIn(fragmento, tabla)
+                acierto = f"{fila['accuracy']:.3f}".replace(".", ",")
+                f1_macro = f"{fila['f1_macro']:.3f}".replace(".", ",")
+                self.assertIn(f"{fila['modelo']} & {acierto} & {f1_macro}", tabla)
+        self.assertIn("C4.5 & presencia & 28 & 0,704 & 0,679 & 0,691", tabla)
+        self.assertIn("Random Forest & presencia & 28 & 0,800 & 0,857 & 0,828", tabla)
         observaciones = (RAIZ / "paper/observaciones_resultados.tex").read_text(encoding="utf-8")
         for texto in (tabla, observaciones):
             self.assertNotIn("Iris", texto)
             self.assertNotIn("Lenses", texto)
             self.assertNotIn("Cleveland", texto)
+
+    def test_latex_publicado_se_regenera_desde_el_json(self):
+        carpeta = RAIZ / "paper"
+        with TemporaryDirectory() as temporal:
+            destino = Path(temporal)
+            (destino / "resultados.json").write_bytes((carpeta / "resultados.json").read_bytes())
+            actualizar_informe(destino)
+            for nombre in ("tablas_resultados.tex", "observaciones_resultados.tex"):
+                self.assertEqual((destino / nombre).read_text(encoding="utf-8"),
+                                 (carpeta / nombre).read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -1,13 +1,27 @@
-\begin{table}[tb]\centering\caption{Evaluación final con selección interna por validación.}
+\newcommand{\TablaFinal}{%
+\begin{table}[!hbp]\centering\setlength{\tabcolsep}{9pt}
+\caption{Evaluación final con selección interna por validación.}
 \label{tab:finales}\small\begin{tabular}{lrrrr}\toprule
-Modelo & Acierto & F1 macro & Apr. (ms) & Pred. (ms)\\\midrule
-C4.5 & 0.721 & 0.719 & 835.2 & 4.6\\
-Random Forest & 0.836 & 0.836 & 64.6 & 14.3\\
-\bottomrule\end{tabular}\end{table}
-\begin{table}[tb]\centering\caption{Efecto de los faltantes adicionales: media entre tres máscaras.}
+Modelo & Acierto & F1 macro & Entr. (ms) & Pred. (ms)\\\midrule
+C4.5 & 0,721 & 0,719 & 835,2 & 4,6\\
+Random Forest & 0,836 & 0,836 & 64,6 & 14,3\\
+\bottomrule\end{tabular}\end{table}}
+\newcommand{\TablaClases}{%
+\begin{table}[!hbp]\centering\setlength{\tabcolsep}{9pt}
+\caption{Evaluación final por clase en el conjunto de prueba.}
+\label{tab:clases}\small\begin{tabular}{llrrrr}\toprule
+Modelo & Clase & Casos & Precisión & Exhaustividad & F1\\\midrule
+C4.5 & presencia & 28 & 0,704 & 0,679 & 0,691\\
+C4.5 & ausencia & 33 & 0,735 & 0,758 & 0,746\\
+Random Forest & presencia & 28 & 0,800 & 0,857 & 0,828\\
+Random Forest & ausencia & 33 & 0,871 & 0,818 & 0,844\\
+\bottomrule\end{tabular}\end{table}}
+\newcommand{\TablaFaltantes}{%
+\begin{table}[tb]\centering\setlength{\tabcolsep}{9pt}
+\caption{Efecto de los faltantes adicionales. Media de tres repeticiones.}
 \label{tab:nulos}\small\begin{tabular}{lrrrr}\toprule
 Modelo & \multicolumn{2}{c}{Acierto} & \multicolumn{2}{c}{F1 macro}\\
  & 0\% & 30\% & 0\% & 30\%\\\midrule
-C4.5 & 0.705 & 0.792 & 0.703 & 0.790\\
-Random Forest & 0.885 & 0.831 & 0.885 & 0.830\\
-\bottomrule\end{tabular}\end{table}
+C4.5 & 0,705 & 0,792 & 0,703 & 0,790\\
+Random Forest & 0,885 & 0,831 & 0,885 & 0,830\\
+\bottomrule\end{tabular}\end{table}}

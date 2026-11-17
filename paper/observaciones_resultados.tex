@@ -1,5 +1,5 @@
-El F1 macro final es 0.719 para C4.5 y 0.836 para Random Forest, estas cifras corresponden a la selección interna por validación; no al máximo de los barridos de prueba.
-
-Al pasar de cero a treinta por ciento de ausencias adicionales, C4.5 pasa de 0.703 a 0.790; Random Forest pasa de 0.885 a 0.830 de F1 macro medio. La comparación conserva parámetros y casos; no se supone que el efecto sea monótono ni que se repita en otros problemas.
-
-En el barrido descriptivo, el árbol sin filtro obtiene 0.754 de tasa de acierto media, con desvío 0.043; con filtro obtiene 0.738, con desvío 0.043. Se informa la variante sin activarla por defecto. Ambas condiciones conservan los demás parámetros y las particiones. La comparación describe esta muestra y no selecciona el uso del filtro mediante los resultados de prueba.
+\newcommand{\ObservacionFinal}{La validación seleccionó C4.5 con profundidad máxima 2 y Random Forest con 30 árboles.}
+\newcommand{\ObservacionClases}{De los 28 casos de presencia, C4.5 identificó 19 y Random Forest identificó 24.}
+\newcommand{\ObservacionFaltantes}{Entre 0 y 30\% de ocultación nominal, el F1 macro medio de C4.5 pasó de 0,703 a 0,790. En Random Forest pasó de 0,885 a 0,830.}
+\newcommand{\ObservacionBarridos}{Al retirar el límite de profundidad en C4.5, la tasa de acierto media fue 1,000 en entrenamiento y 0,754 en prueba. La brecha es compatible con un ajuste a particularidades de las muestras de entrenamiento. En Random Forest, las medias de prueba con 30, 100 y 200 árboles fueron 0,781, 0,798 y 0,787, respectivamente. El valor intermedio obtuvo el promedio más alto entre los tres.}
+\newcommand{\ObservacionFiltro}{La tasa de acierto media en prueba fue 0,754 sin el filtro y 0,738 con el filtro. Los desvíos respectivos fueron 0,043 y 0,043.}

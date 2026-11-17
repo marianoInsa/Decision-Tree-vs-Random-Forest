@@ -8,7 +8,6 @@
 \usepackage{algorithmic}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage{placeins}
 
 \DeclareMathOperator{\Gain}{Gain}
 \DeclareMathOperator{\SplitInfo}{SplitInfo}
@@ -49,17 +48,15 @@ philippedamau@gmail.com, francodamiansanchez10@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Se compara un árbol de decisión de desarrollo propio basado en C4.5 con Random Forest de scikit-learn sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. Se utiliza un protocolo común con particiones estratificadas, selección interna por validación y evaluación final reservada. Se estudian métricas por clase, tiempos, sensibilidad a parámetros y valores faltantes adicionales. Los experimentos distinguen los faltantes naturales de Heart Disease de las máscaras artificiales y mantienen las transformaciones dentro del entrenamiento, la comparación describe las condiciones medidas y sus limitaciones; no establece una superioridad general de un algoritmo.
+Se compara un árbol de decisión de desarrollo propio basado en C4.5 con Random Forest de scikit-learn sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. Se utiliza un protocolo común con particiones estratificadas, selección interna por validación y evaluación final reservada. Se analizan las métricas por clase, los tiempos de entrenamiento y de predicción, y la variación del rendimiento al cambiar los parámetros y las particiones. También se estudian los valores faltantes adicionales al ocultar celdas de entrenamiento y de prueba.
 \keywords{Árbol de decisión \and C4.5 \and Random Forest \and Clasificación}
 \end{abstract}
 
 \section{Introducción}
 
-Un clasificador automático asigna una clase a cada caso a partir de sus características. Los árboles de decisión producen un modelo legible, en el que cada camino de la raíz a una hoja equivale a una regla \cite{liu2011}. Random Forest combina muchos árboles para reducir la dependencia de una sola estructura, a cambio de más cómputo y de una decisión que ya no se sigue en un único camino \cite{breiman2001}. C4.5 elige cada pregunta con un criterio orientado a separar las clases y admite atributos numéricos y categóricos \cite{liu2011}. Ninguno de los dos enfoques domina al otro en general: la elección depende del problema, de la métrica que se priorice y del costo que se acepte pagar.
+Un clasificador automático asigna una clase a cada caso a partir de sus características. En un árbol de decisión, cada camino de la raíz a una hoja puede leerse como una regla \cite{liu2011}. C4.5 elige cada pregunta con un criterio orientado a separar las clases y admite atributos numéricos y categóricos \cite{liu2011}. Random Forest combina muchos árboles para reducir la dependencia de una sola estructura, y su predicción resulta de agregar las respuestas del conjunto \cite{breiman2001}.
 
-Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. La comparación usa las mismas particiones, las mismas métricas y las mismas condiciones de evaluación. Con esquemas de evaluación distintos, una diferencia de rendimiento puede reflejar la forma de medir y no el algoritmo. El objetivo es determinar en qué condiciones conviene cada uno, atendiendo a la tasa de acierto (proporción de predicciones correctas), la estabilidad de las predicciones ante cambios de semilla, el tiempo de cómputo y la interpretabilidad.
-
-Las contribuciones son una implementación propia de C4.5 con decisiones explícitas sobre la construcción, el criterio de división y el control del crecimiento; un protocolo común de evaluación; y un análisis comparativo de esos cuatro aspectos. El código fuente y los resultados reproducibles están disponibles en el repositorio del trabajo \cite{repositorio2026}.
+Este trabajo compara una implementación propia de C4.5 con el Random Forest de scikit-learn \cite{scikitRF} sobre el conjunto de datos Heart Disease. Se evalúan los errores de clasificación, la variación del rendimiento entre particiones, los tiempos de cómputo y la sensibilidad a parámetros y a valores faltantes. La implementación admite atributos mixtos y permite inspeccionar la estructura del árbol para examinar cómo se generan sus predicciones. Las contribuciones incluyen el árbol de desarrollo propio, una interfaz de experimentación y un protocolo de evaluación con particiones y métricas comunes. El código fuente y los resultados están disponibles en el repositorio del trabajo \cite{repositorio2026}.
 
 El documento describe primero los fundamentos de ambos modelos, luego la implementación, después los experimentos y cierra con las conclusiones.
 
@@ -88,9 +85,9 @@ La ganancia favorece a los atributos con muchos valores distintos, porque fragme
 \label{eq:gain-ratio}
 \end{align}
 
-Los atributos numéricos requieren un tratamiento distinto. En cada nodo se ordenan los valores observados y se examinan los cortes entre valores consecutivos; cada corte separa los casos con $A\le t$ de los que tienen $A>t$. Se conserva el corte con la mayor tasa de ganancia. El umbral es un valor observado y se elige en cada nodo, sin discretización global. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse \cite{liu2011}.
+Los atributos numéricos se dividen mediante un umbral $t$ que separa los valores $A\le t$ de los valores $A>t$. La búsqueda se realiza en cada nodo y considera cortes entre valores consecutivos de la lista ordenada de valores conocidos, distintos y con peso positivo \cite{liu2011}. La configuración habitual del trabajo conserva el corte con la mayor tasa de ganancia y usa como umbral el menor de los dos valores que delimitan ese corte. Un atributo numérico puede reutilizarse en niveles inferiores, mientras que un atributo categórico se descarta después de usarse en una rama \cite{liu2011}.
 
-Con valores faltantes, sea $W_K$ la masa de los casos con valor conocido para el atributo y $W_U$ la de los que no lo tienen. La ganancia se calcula solo sobre el subconjunto $D_K$ de casos conocidos y se escala por la fracción $W_K/W$, ecuación~\eqref{eq:ganancia-ajustada}. La información de la partición agrega la masa faltante $W_U$ como una rama de cálculo, aunque no origine una rama del árbol. La tasa de ganancia ajustada es el cociente entre la ganancia ajustada y esa información de la partición. En el entrenamiento, un caso faltante se envía a todas las ramas y su peso se reparte según $q_j=W_j/W_K$, ecuación~\eqref{eq:proporcion-rama}; en la predicción, las probabilidades de las ramas se combinan con esas mismas proporciones \cite{liu2011}.
+Con valores faltantes, $W_K$ es la masa de los casos con valor conocido para el atributo y $W_U$ la de los casos con valor faltante, con $W=W_K+W_U$. En las ecuaciones~\eqref{eq:ganancia-ajustada} y~\eqref{eq:proporcion-rama}, $D_j$ y $W_j$ corresponden a los casos conocidos de la rama $j$ antes del reparto, por lo que $\sum_j W_j=W_K$. La ganancia se calcula sobre el subconjunto conocido $D_K$ y se escala por la fracción $W_K/W$. La información de la partición incluye la masa faltante $W_U$ como un término adicional de la ecuación~\eqref{eq:split-info}, con la convención $0\log_2 0=0$. La tasa de ganancia ajustada divide la ganancia ajustada por esa información. En el entrenamiento se reparte el peso de cada caso faltante según las proporciones $q_j$ de las ramas y en la predicción se combinan sus probabilidades con las mismas proporciones \cite{liu2011}.
 \begin{align}
 \Gain^*(D,A) &= \frac{W_K}{W}\left[H(D_K) - \sum_j \frac{W_j}{W_K}H(D_j)\right],
 \label{eq:ganancia-ajustada}\\
@@ -110,19 +107,20 @@ Breiman muestra que el error de generalización depende de la fuerza de los árb
 
 \subsection{C4.5}
 
-El Algoritmo~\ref{alg:c45} resume la construcción. La masa de un nodo es la suma de los pesos de sus casos, de modo que los casos repartidos por valores faltantes no cuentan como filas completas. Las paradas estructurales se evalúan antes de elegir la división; los mínimos de ganancia y de tasa de ganancia se aplican después y son estrictos (la igualdad permite dividir).
+El Algoritmo~\ref{alg:c45} resume la construcción con la configuración habitual. El conjunto $\mathcal{A}$ contiene los atributos disponibles y $d$ indica la profundidad del nodo, que comienza en cero en la raíz. La masa de un nodo suma los pesos de sus casos y refleja el reparto fraccionario de los valores faltantes. Las paradas estructurales se evalúan antes de elegir la división. La ganancia y la tasa de ganancia de la división elegida deben alcanzar sus mínimos respectivos, incluida la igualdad.
 
 \begin{algorithm}[tb]
 \caption{Construcción recursiva de un árbol C4.5}
 \label{alg:c45}
 \begin{algorithmic}[1]
 \STATE Calcular la masa por clase y elegir la clase mayoritaria.
-\IF{clase única, $\mathcal{A}$ vacío, profundidad máxima o masa mínima}
+\IF{clase única, $\mathcal{A}$ vacío, límite de profundidad alcanzado o masa inferior al mínimo}
     \RETURN hoja con la clase mayoritaria.
 \ENDIF
 \FOR{atributo $a \in \mathcal{A}$}
-    \STATE Evaluar sus divisiones y conservar la mayor tasa de ganancia ajustada.
+    \STATE Evaluar sus divisiones y guardar la de mayor tasa de ganancia ajustada.
 \ENDFOR
+\STATE Elegir la división candidata de mayor tasa de ganancia ajustada, si existe.
 \IF{no hay candidato o no se alcanzan los mínimos}
     \RETURN hoja con la clase mayoritaria.
 \ENDIF
@@ -138,40 +136,45 @@ En la predicción, un valor conocido sigue una sola rama, una categoría no vist
 
 \subsection{Random Forest}
 
-Random Forest usa RandomForestClassifier de scikit-learn \cite{scikitRF}, que promedia las probabilidades de las hojas. Las categorías se codifican como indicadores binarios (una categoría no vista se representa con ceros) y, por decisión de diseño, los faltantes se completan con la mediana (numéricos) o la moda (categóricos); ambas transformaciones se ajustan solo con el bloque de entrenamiento \cite{scikitImpute}.
+Random Forest usa el clasificador de scikit-learn, que promedia las probabilidades de clase estimadas por los árboles \cite{scikitRF}. Los faltantes numéricos se completan con la mediana y los categóricos con la moda del bloque de entrenamiento \cite{scikitImpute}. Las categorías observadas al ajustar la codificación se representan con columnas indicadoras binarias, y una categoría nueva se representa con ceros en esas columnas. El bosque selecciona los candidatos a cada división entre las columnas de esa tabla transformada.
 
 \section{Descripción de la solución implementada}
 
-La solución tiene tres capas: preparación de datos, modelos y evaluación. Ambos modelos comparten particiones y métricas, y ninguno accede al conjunto de prueba durante el ajuste. Las diferencias de preprocesamiento (categorías nativas y faltantes ponderados en C4.5; codificación binaria e imputación en Random Forest) son una posible fuente de sesgo en la comparación.
+La solución integra la preparación de datos, los modelos, la evaluación y la interfaz. Para conservar la información de los atributos continuos, C4.5 busca umbrales durante el crecimiento y permite reutilizar esos atributos en niveles inferiores. Los dos modelos comparten las particiones y ajustan sus transformaciones con los datos de entrenamiento. Las diferencias observadas incluyen el efecto del tratamiento de las categorías y de los valores faltantes propio de cada implementación.
 
-Los problemas principales fueron los atributos continuos, los valores faltantes, el control del crecimiento y la comparabilidad del preprocesamiento; los tratamientos se describen en las secciones 2.1, 3.1 y 3.2. El crecimiento se controla con cuatro parámetros independientes (ganancia mínima, profundidad máxima, masa mínima y tasa de ganancia mínima); la pospoda pesimista opcional existe, pero la evaluación la mantiene desactivada. Las pruebas unitarias del repositorio cubren los cortes, la conservación de masa y la repetición de particiones.
+El crecimiento del árbol se controla con la ganancia mínima, la profundidad máxima, la masa mínima para dividir un nodo y la tasa de ganancia mínima. La implementación también ofrece pospoda pesimista opcional, desactivada en las evaluaciones publicadas. Las pruebas unitarias del repositorio cubren la búsqueda de cortes y la conservación de masa. Las pruebas del protocolo verifican la repetición de las particiones.
+
+La interfaz está disponible en el cuaderno de Google Colab enlazado en el repositorio \cite{repositorio2026}. La pestaña ``Comparar modelos'' muestra las métricas, los tiempos y las matrices de confusión. La pestaña ``Variar un parámetro'' permite repetir la evaluación con distintos valores y comparar las curvas resultantes. La pestaña ``Ver el árbol'' dibuja la estructura de C4.5 y permite inspeccionar sus divisiones. La interfaz y la batería experimental también incluyen Iris y Lenses, mientras que los resultados del informe se limitan a Heart Disease.
 
 \section{Simulaciones y resultados}
 
 \subsection{Datos y configuración}
 
-Los experimentos utilizan la versión procesada de Cleveland del conjunto de datos Heart Disease \cite{heartDisease}. El archivo contiene 303 casos: trece atributos y la clase. Seis atributos son numéricos (edad, presión arterial en reposo, colesterol sérico, frecuencia cardíaca máxima, depresión del segmento ST y cantidad de vasos principales, de 0 a 3) y siete son categóricos (sexo, tipo de dolor de pecho, glucemia en ayunas, electrocardiograma en reposo, angina inducida por ejercicio, pendiente del segmento ST y thal\footnote{Thal corresponde al resultado de una prueba de perfusión miocárdica con talio.}). La cantidad de vasos se conserva numérica porque el archivo la registra como un conteo.
+La evaluación que se presenta utiliza la versión procesada de Cleveland del conjunto de datos Heart Disease \cite{heartDisease}. El archivo contiene 303 casos con trece atributos y la clase. Seis atributos son numéricos (edad, presión arterial en reposo, colesterol sérico, frecuencia cardíaca máxima, depresión del segmento ST y cantidad de vasos principales, de 0 a 3) y siete son categóricos (sexo, tipo de dolor de pecho, glucemia en ayunas, electrocardiograma en reposo, angina inducida por ejercicio, pendiente del segmento ST y thal\footnote{Thal corresponde al resultado de una prueba de perfusión miocárdica con talio.}). La cantidad de vasos se conserva numérica porque el archivo la registra como un conteo.
 
 La preparación nombra las columnas, convierte ``?'' en valor faltante y pasa a texto los siete atributos categóricos, codificados como números, para evitar un orden inexistente. No se descartan filas ni atributos, no se imputa al cargar y no se escalan los numéricos. La clase ``num'' se binariza en ausencia (cero) y presencia (uno a cuatro): quedan 164 casos de ausencia y 139 de presencia.
 
-Hay seis celdas faltantes en seis casos (cuatro en la cantidad de vasos, dos en thal). Ambos modelos reciben las mismas filas y ausencias; su tratamiento se describe en la sección 2.1 y en la sección 3.2.
+Hay seis celdas faltantes en seis casos (cuatro en la cantidad de vasos, dos en thal). Ambos modelos reciben las mismas filas y ausencias, con el tratamiento descrito en las secciones 2.1 y 3.2.
 
-Se reserva el 20\% de los casos para prueba (estratificado, semilla 42) y, del resto, el 25\% para validación: 181, 61 y 61 casos, comunes a ambos modelos. C4.5 varía la profundidad máxima (2 y sin límite), con masa mínima 2, ganancia mínima 0 y tasa de ganancia mínima 0.
-Random Forest varía la cantidad de árboles (30 y 100) con raíz cuadrada del total de atributos por corte, profundidad sin límite, criterio de Gini, muestreo con reemplazo y semilla 42. La elección usa el F1 macro de validación (sección~\ref{sec:resultados}), con desempate por orden de la grilla; luego se reentrena con los 242 casos de ajuste y validación y se evalúa en los 61 de prueba.
+La tasa de acierto es la proporción de predicciones correctas. Para cada clase, la precisión mide qué proporción de los casos asignados a esa clase pertenece a ella, y la exhaustividad mide qué proporción de sus casos reales identifica el modelo. El F1 combina precisión y exhaustividad mediante su media armónica, y el F1 macro da el mismo peso al F1 de cada clase. Cuando el denominador de una métrica es cero, se registra un valor de cero.
+
+Las particiones conservan aproximadamente la proporción de cada clase y se generan con la semilla 42. Se reserva el 20\% para prueba y el 25\% del bloque restante para validación, con 181 casos de ajuste, 61 de validación y 61 de prueba. Para C4.5 se comparan profundidad máxima 2 y crecimiento sin límite de profundidad, con masa mínima 2, ganancia mínima 0 y tasa de ganancia mínima 0. Para Random Forest se comparan 30 y 100 árboles, con profundidad sin límite, criterio de Gini, muestreo con reemplazo y semilla 42. La cantidad de columnas candidatas por división se configura como la raíz cuadrada del total de columnas transformadas, redondeada hacia abajo. Cada modelo se elige por el F1 macro de validación, con desempate por orden de evaluación. Luego se reentrena con los 242 casos de ajuste y validación y se evalúa en los 61 de prueba.
 
 \subsection{Resultados}
-\label{sec:resultados}
 
-Se informan la tasa de acierto y, por clase, precisión, exhaustividad y F1, con promedio macro (igual peso por clase) y promedio ponderado por soporte; una división sin denominador se informa como cero. La Tabla~\ref{tab:finales} muestra la evaluación final y los tiempos: el entrenamiento incluye preparación y aprendizaje; la inferencia, transformar y predecir.
-
-\begingroup
-\setlength{\tabcolsep}{9pt}
+\input{observaciones_resultados}
 \input{tablas_resultados}
-\endgroup
 
-La batería oculta 0, 5, 15 y 30\% nominal de celdas adicionales con tres máscaras (semillas 42, 43 y 44); las mismas celdas se ocultan para ambos modelos y las etiquetas permanecen completas. El 0\% conserva los faltantes naturales de Heart Disease. Los parámetros son fijos en los cuatro porcentajes y distintos de los elegidos por validación: C4.5 con profundidad seis y ganancia mínima 0,05 (para limitar el costo del reparto fraccionario) y Random Forest con 100 árboles.
+\ObservacionFinal{} La Tabla~\ref{tab:finales} muestra el rendimiento global y los tiempos de una corrida. El tiempo de entrenamiento incluye la preparación y el aprendizaje, y el de predicción incluye la transformación de las entradas y la clasificación del bloque de prueba. La Tabla~\ref{tab:clases} detalla el rendimiento por clase. \ObservacionClases{}
 
-La Tabla~\ref{tab:nulos} presenta los extremos y la Figura~\ref{fig:nulos} incluye además 5\% y 15\%. Con 61 casos de prueba, un acierto modifica la tasa en 1,6 puntos porcentuales y la dispersión entre máscaras no estima la incertidumbre de cambiar los casos; los saltos individuales se interpretan con cautela.
+\TablaFinal
+\TablaClases
+
+La batería de faltantes conserva la partición de semilla 42 y aplica probabilidades de ocultación de 0, 5, 15 y 30\% por celda en entrenamiento y prueba. En cada nivel se usan las semillas de máscara 42, 43 y 44, con las mismas celdas ocultas para ambos modelos y con las etiquetas intactas. Cada modelo vuelve a entrenarse con los datos enmascarados, por lo que la evaluación reúne los efectos de aprender y predecir con menos información. El 0\% conserva los faltantes naturales y las tres repeticiones usan los mismos datos y parámetros. En toda la batería, C4.5 usa profundidad máxima 6 y ganancia mínima 0,05, para limitar el costo del reparto fraccionario, y Random Forest usa 100 árboles.
+
+La Tabla~\ref{tab:nulos} presenta los extremos y la Figura~\ref{fig:nulos} incluye los dos niveles intermedios. \ObservacionFaltantes{} Con 61 casos de prueba, un acierto modifica la tasa en aproximadamente 1,6 puntos porcentuales. Las diferencias entre máscaras describen lo que ocurre sobre ese mismo conjunto de casos.
+
+\TablaFaltantes
 
 \begin{figure}[tb]
 \centering\includegraphics[width=0.85\textwidth]{figuras/faltantes_resumen.pdf}
@@ -179,28 +182,26 @@ La Tabla~\ref{tab:nulos} presenta los extremos y la Figura~\ref{fig:nulos} inclu
 \label{fig:nulos}
 \end{figure}
 
-Los barridos varían un parámetro por vez sobre tres particiones estratificadas (semillas 42, 43 y 44) compartidas entre algoritmos. La Figura~\ref{fig:barridos}(a) muestra el efecto de la profundidad en C4.5 y la Figura~\ref{fig:barridos}(b) el de la cantidad de árboles en Random Forest; las bandas son desvíos entre particiones, no intervalos de confianza, y los barridos son descriptivos: no seleccionan modelos.
+En los barridos se varía un parámetro por vez en tres particiones estratificadas compartidas. En Random Forest, las semillas 42, 43 y 44 cambian la partición y la aleatoriedad del modelo. La Figura~\ref{fig:barridos} muestra las medias y un desvío estándar muestral a cada lado, por profundidad en C4.5 y por cantidad de árboles en Random Forest. La selección final se basa solo en la validación interna.
 
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.48\textwidth]{figuras/profundidad_c45.pdf}\hfill
 \includegraphics[width=0.48\textwidth]{figuras/arboles_bosque.pdf}
-\caption{Heart Disease: (a) tasa de acierto en entrenamiento y prueba al variar la profundidad de C4.5; (b) tasa de acierto al variar la cantidad de árboles del bosque.}
+\caption{Tasa de acierto en entrenamiento y prueba al variar la profundidad de C4.5 (izquierda) y la cantidad de árboles de Random Forest (derecha).}
 \label{fig:barridos}
 \end{figure}
 
-Se incluye, desactivado por defecto, un filtro opcional: el corte numérico se elige por ganancia y solo compiten atributos con ganancia al menos igual a la media antes de comparar las tasas. Se estudia como variante en los barridos. Es una decisión experimental de este trabajo y no se atribuye a una referencia externa.
+\ObservacionBarridos{}
 
-\input{observaciones_resultados}
+El filtro de C4.5 elige por ganancia ajustada cada corte numérico y compara las tasas de las candidatas cuya ganancia alcanza la media. \ObservacionFiltro{} Ambas condiciones conservan la partición de cada repetición y los demás parámetros.
 
 \section{Conclusiones}
 
-Se implementó un C4.5 propio con atributos mixtos, pesos fraccionarios y controles de crecimiento, y se lo comparó con Random Forest bajo un protocolo común: transformaciones aprendidas solo con entrenamiento, selección por validación separada de los barridos descriptivos y distinción entre faltantes naturales y artificiales. Random Forest obtuvo mayor F1 macro (0,836 frente a 0,719) y mayor tasa de acierto (0,836 frente a 0,721), con menor tiempo de entrenamiento (64,6 ms frente a 835,2 ms); al pasar de 0 a 30\% de faltantes adicionales, el F1 macro de C4.5 subió de 0,703 a 0,790 y el de Random Forest bajó de 0,885 a 0,830.
+En la prueba reservada de Cleveland, Random Forest obtuvo mayor tasa de acierto y F1 macro e identificó más casos de presencia. En esa corrida, el bosque entrenó más rápido y C4.5 predijo en menos tiempo. El árbol permite examinar las divisiones que conducen a cada hoja. La interfaz permite repetir la comparación y explorar los parámetros.
 
-Los resultados corresponden a un problema pequeño y a las particiones medidas; la dispersión entre máscaras y particiones no estima la incertidumbre poblacional y los tiempos dependen del entorno. El árbol ofrece reglas inspeccionables; el bosque combina múltiples árboles, y esa diferencia debe pesarse junto con las métricas.
+La comparación final usa una sola partición y los tiempos dependen del entorno. Los barridos describen la variación entre las combinaciones de partición y semilla evaluadas. La batería de faltantes reúne los efectos del enmascarado en entrenamiento y prueba. Queda por estudiar la pospoda, repetir las mediciones de tiempo y evaluar faltantes solo durante la predicción.
 
-Aunque el árbol incorpora pospoda pesimista opcional, la evaluación experimental la mantuvo desactivada por defecto; su estudio comparativo sistemático, una validación cruzada más extensa y las mediciones de tiempo en condiciones controladas quedan como trabajo futuro.
-
-\bibliographystyle{splncs04-appearance}
+\bibliographystyle{splncs04}
 \bibliography{refs}
 \end{document}

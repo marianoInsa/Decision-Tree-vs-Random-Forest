@@ -29,8 +29,6 @@ def generar_resultados():
                 print(f"Celda {numero}: completada.", flush=True)
     finally:
         os.chdir(directorio_original)
-    from paper.actualizar_informe import actualizar_observaciones
-    actualizar_observaciones()
     return raiz / "paper/resultados.json"
 
 

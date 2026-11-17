@@ -77,7 +77,7 @@ uv run --locked python paper/generar_resultados.py
 uv run --locked python paper/build.py
 ```
 
-El primer comando ejecuta el código real del notebook y genera `resultados.json`, tablas LaTeX y figuras PDF. No mantiene una segunda batería ni conserva cifras históricas. El segundo compila el informe con Tectonic en una carpeta temporal y comprueba el límite de doce páginas. Para actualizar únicamente las observaciones textuales tras ejecutar el notebook, usar `python paper/actualizar_informe.py` con el entorno preparado.
+El primer comando ejecuta el código del notebook y genera `resultados.json`, las tablas y observaciones LaTeX y las figuras PDF. El segundo compila el informe con Tectonic en una carpeta temporal y comprueba el límite de doce páginas. Para regenerar las tablas y observaciones a partir del JSON existente, usar `python paper/actualizar_informe.py` desde la raíz.
 
 ## Pruebas
 
