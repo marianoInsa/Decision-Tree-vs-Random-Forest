@@ -1,6 +1,14 @@
 # Árbol de decisión C4.5 y Random Forest
 
-Trabajo práctico de Inteligencia Artificial, ciclo 2026. Integrantes: Franco Sanchez, Laura Cornaló Bassan, Mariano Insaurralde, Matías Fernandez y Philippe Maurel.
+Trabajo práctico de Inteligencia Artificial, ciclo 2026.
+
+| Integrante | Correo | Legajo |
+|---|---|---|
+| Laura Cornaló Bassan | lauricornalo@gmail.com | 23354 |
+| Matías Fernandez | matiasafernandez23@gmail.com | 24282 |
+| Mariano Insaurralde | marianoinsaurralde5@gmail.com | 24684 |
+| Philippe Maurel | philippedamau@gmail.com | 25613 |
+| Franco Sanchez | francodamiansanchez10@gmail.com | 27310 |
 
 El proyecto compara un árbol propio basado en C4.5 con Random Forest de scikit-learn. Los notebooks explican sus fórmulas, decisiones, parámetros y contratos.
 
@@ -82,7 +90,3 @@ La primera compilación puede descargar los paquetes TeX. UTF-8 evita depender d
 ## Google Colab
 
 La primera celda de `04_interfaz.ipynb` descarga el repositorio si falta. El notebook utiliza las bibliotecas del entorno de Colab. El archivo `requirements.txt` se conserva como exportación del entorno local definido en `pyproject.toml` y `uv.lock`.
-
-## Pendientes
-
-Quedan por confirmar los datos personales de la portada y la revisión editorial final. Más particiones, validación cruzada y tiempos medidos bajo condiciones controladas son ampliaciones separadas.
