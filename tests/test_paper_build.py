@@ -45,7 +45,7 @@ class PaperBuildTest(unittest.TestCase):
             ("Franco Sanchez", "27310"),
         )
         for author, legajo in authors_and_legajos:
-            self.assertRegex(text, re.escape(author) + r"\s*1\s*\[" + legajo + r"\]")
+            self.assertRegex(text, re.escape(author) + r"\s*(?:1\s*)?\[" + legajo + r"\]")
         self.assertNotIn("et al.", text)
         for path, contents in existing.items():
             self.assertEqual(path.read_bytes(), contents, msg=f"Modified {path.name}")

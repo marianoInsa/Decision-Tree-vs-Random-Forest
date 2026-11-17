@@ -34,11 +34,11 @@
 \title{Comparativa del rendimiento de un árbol de decisión C4.5 propio vs. el modelo de ensamble Random Forest en problemas de clasificación}
 \titlerunning{C4.5 y Random Forest}
 
-\author{Laura Cornaló Bassan\inst{1}\textsuperscript{[23354]} \and
-Matías Fernandez\inst{1}\textsuperscript{[24282]} \and
-Mariano Insaurralde\inst{1}\textsuperscript{[24684]} \and
-Philippe Maurel\inst{1}\textsuperscript{[25613]} \and
-Franco Sanchez\inst{1}\textsuperscript{[27310]}}
+\author{Laura Cornaló Bassan\textsuperscript{[23354]} \and
+Matías Fernandez\textsuperscript{[24282]} \and
+Mariano Insaurralde\textsuperscript{[24684]} \and
+Philippe Maurel\textsuperscript{[25613]} \and
+Franco Sanchez\textsuperscript{[27310]}}
 \authorrunning{L. C. Bassan, M. Fernandez, M. Insaurralde, P. Maurel y F. Sanchez}
 
 \institute{Universidad Tecnológica Nacional, Facultad Regional de Resistencia\\
@@ -49,7 +49,7 @@ philippedamau@gmail.com, francodamiansanchez10@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Se compara un árbol de decisión propio basado en C4.5 con Random Forest de scikit-learn sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. Se utiliza un protocolo común con particiones estratificadas, selección interna por validación y evaluación final reservada. Se estudian métricas por clase, tiempos, sensibilidad a parámetros y valores faltantes adicionales. Los experimentos distinguen los faltantes naturales de Heart Disease de las máscaras artificiales y mantienen las transformaciones dentro del entrenamiento. La comparación describe las condiciones medidas y sus limitaciones; no establece una superioridad general de un algoritmo.
+Se compara un árbol de decisión de desarrollo propio basado en C4.5 con Random Forest de scikit-learn sobre el conjunto de datos Heart Disease, que combina atributos categóricos y numéricos. Se utiliza un protocolo común con particiones estratificadas, selección interna por validación y evaluación final reservada. Se estudian métricas por clase, tiempos, sensibilidad a parámetros y valores faltantes adicionales. Los experimentos distinguen los faltantes naturales de Heart Disease de las máscaras artificiales y mantienen las transformaciones dentro del entrenamiento, la comparación describe las condiciones medidas y sus limitaciones; no establece una superioridad general de un algoritmo.
 \keywords{Árbol de decisión \and C4.5 \and Random Forest \and Clasificación}
 \end{abstract}
 
@@ -164,7 +164,10 @@ Random Forest varía la cantidad de árboles (30 y 100) con raíz cuadrada del t
 
 Se informan la tasa de acierto y, por clase, precisión, exhaustividad y F1, con promedio macro (igual peso por clase) y promedio ponderado por soporte; una división sin denominador se informa como cero. La Tabla~\ref{tab:finales} muestra la evaluación final y los tiempos: el entrenamiento incluye preparación y aprendizaje; la inferencia, transformar y predecir.
 
+\begingroup
+\setlength{\tabcolsep}{9pt}
 \input{tablas_resultados}
+\endgroup
 
 La batería oculta 0, 5, 15 y 30\% nominal de celdas adicionales con tres máscaras (semillas 42, 43 y 44); las mismas celdas se ocultan para ambos modelos y las etiquetas permanecen completas. El 0\% conserva los faltantes naturales de Heart Disease. Los parámetros son fijos en los cuatro porcentajes y distintos de los elegidos por validación: C4.5 con profundidad seis y ganancia mínima 0,05 (para limitar el costo del reparto fraccionario) y Random Forest con 100 árboles.
 
@@ -192,7 +195,7 @@ Se incluye, desactivado por defecto, un filtro opcional: el corte numérico se e
 
 \section{Conclusiones}
 
-Se implementó un C4.5 propio con atributos mixtos, pesos fraccionarios y controles de crecimiento, y se lo comparó con Random Forest bajo un protocolo común: transformaciones aprendidas solo con entrenamiento, selección por validación separada de los barridos descriptivos y distinción entre faltantes naturales y artificiales. En Heart Disease, Random Forest obtuvo mayor F1 macro (0,836 frente a 0,719) y mayor tasa de acierto (0,836 frente a 0,721), con menor tiempo de entrenamiento (64,6 ms frente a 835,2 ms); al pasar de 0 a 30\% de faltantes adicionales, el F1 macro de C4.5 subió de 0,703 a 0,790 y el de Random Forest bajó de 0,885 a 0,830.
+Se implementó un C4.5 propio con atributos mixtos, pesos fraccionarios y controles de crecimiento, y se lo comparó con Random Forest bajo un protocolo común: transformaciones aprendidas solo con entrenamiento, selección por validación separada de los barridos descriptivos y distinción entre faltantes naturales y artificiales. Random Forest obtuvo mayor F1 macro (0,836 frente a 0,719) y mayor tasa de acierto (0,836 frente a 0,721), con menor tiempo de entrenamiento (64,6 ms frente a 835,2 ms); al pasar de 0 a 30\% de faltantes adicionales, el F1 macro de C4.5 subió de 0,703 a 0,790 y el de Random Forest bajó de 0,885 a 0,830.
 
 Los resultados corresponden a un problema pequeño y a las particiones medidas; la dispersión entre máscaras y particiones no estima la incertidumbre poblacional y los tiempos dependen del entorno. El árbol ofrece reglas inspeccionables; el bosque combina múltiples árboles, y esa diferencia debe pesarse junto con las métricas.
 
